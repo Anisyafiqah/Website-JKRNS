@@ -8,6 +8,8 @@ import {
   JataNegeriSembilan,
   JkrLogo
 } from './components/Logos';
+import { AdminLoginModal } from './components/AdminLoginModal';
+import { AdminPortal } from './components/AdminPortal';
 
 interface TenderItem {
   id: string;
@@ -256,6 +258,39 @@ export default function App() {
     title: '',
     content: ''
   });
+
+  // Admin Module State
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
+    return localStorage.getItem('jkr_admin_token') === 'jkr-ns-admin-session-token-2026';
+  });
+  const [showAdminLoginModal, setShowAdminLoginModal] = useState<boolean>(false);
+  const [showAdminPortal, setShowAdminPortal] = useState<boolean>(false);
+
+  const handleAdminLoginSuccess = () => {
+    setIsAdminLoggedIn(true);
+    setShowAdminPortal(true);
+    refreshBackendData();
+  };
+
+  const handleAdminLogout = () => {
+    localStorage.removeItem('jkr_admin_token');
+    localStorage.removeItem('jkr_admin_user');
+    setIsAdminLoggedIn(false);
+    setShowAdminPortal(false);
+  };
+
+  const handleDeleteComplaint = async (id: string) => {
+    try {
+      const res = await fetch(`/api/aduan/${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        await refreshBackendData();
+      }
+    } catch (err) {
+      console.error('Failed to delete complaint:', err);
+    }
+  };
 
   // Fetch complaints and Cloudflare connection status from backend
   const refreshBackendData = async () => {
@@ -618,6 +653,21 @@ export default function App() {
 
   const currentDistrict = DISTRICTS_DATA[selectedDistrict] || DISTRICTS_DATA.seremban;
 
+  // Render Admin Portal if activated by logged-in admin
+  if (showAdminPortal && isAdminLoggedIn) {
+    return (
+      <AdminPortal
+        complaints={submittedComplaints}
+        cloudflareInfo={cloudflareInfo}
+        onClose={() => setShowAdminPortal(false)}
+        onLogout={handleAdminLogout}
+        onUpdateStatus={handleUpdateTicketStatus}
+        onDeleteComplaint={handleDeleteComplaint}
+        onRefresh={refreshBackendData}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col font-sans bg-slate-50 text-slate-800 transition-colors duration-200">
       {/* ==================== 1. HEADER & ACCESSIBILITY BAR ==================== */}
@@ -701,6 +751,39 @@ export default function App() {
                 <i className="fa-solid fa-globe text-xs text-[#DC2626]"></i>
                 <span className="font-bold">{lang}</span>
               </button>
+
+              {/* Butang Akses Pentadbir (Admin) */}
+              {isAdminLoggedIn ? (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPortal(true)}
+                    className="flex items-center gap-1.5 bg-[#FFD100] text-slate-900 px-2.5 py-1 rounded-lg font-bold text-xs hover:bg-yellow-400 transition-all shadow-xs cursor-pointer"
+                    title="Buka Papan Pemuka Pentadbir"
+                  >
+                    <i className="fa-solid fa-shield-halved text-xs text-[#DC2626]"></i>
+                    <span>Portal Admin</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAdminLogout}
+                    className="px-2 py-1 bg-red-900/50 hover:bg-red-700 text-red-200 rounded-lg text-xs transition-colors cursor-pointer"
+                    title="Log Keluar Pentadbir"
+                  >
+                    <i className="fa-solid fa-power-off"></i>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowAdminLoginModal(true)}
+                  className="flex items-center gap-1.5 bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-[#FFD100] px-2.5 py-1 rounded-lg border border-slate-700 transition-colors font-semibold text-xs cursor-pointer"
+                  title="Log Masuk Pentadbir JKR"
+                >
+                  <i className="fa-solid fa-lock text-xs text-[#FFD100]"></i>
+                  <span>Log Masuk Admin</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -736,7 +819,7 @@ export default function App() {
             </div>
 
             {/* Menu Desktop */}
-            <nav className="hidden lg:flex items-center gap-6 font-semibold text-xs sm:text-sm text-slate-700">
+            <nav className="hidden lg:flex items-center gap-5 font-semibold text-xs sm:text-sm text-slate-700">
               <a href="#heroSlider" className="hover:text-[#DC2626] transition-colors py-1">
                 {lang === 'BM' ? 'Utama' : 'Home'}
               </a>
@@ -760,6 +843,23 @@ export default function App() {
                 <i className="fa-solid fa-headset text-[#FFD100]"></i>
                 <span>e-Aduan</span>
               </a>
+
+              {/* Butang Terus Portal Pentadbir */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isAdminLoggedIn) {
+                    setShowAdminPortal(true);
+                  } else {
+                    setShowAdminLoginModal(true);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-300 hover:border-slate-800 text-slate-800 hover:bg-slate-100 transition-all cursor-pointer"
+                title="Pusat Kawalan Pentadbir"
+              >
+                <i className="fa-solid fa-user-shield text-[#DC2626]"></i>
+                <span>{isAdminLoggedIn ? 'Modul Admin' : 'Log Masuk Admin'}</span>
+              </button>
             </nav>
 
             {/* Butang Mobile Menu Toggle */}
@@ -1943,177 +2043,67 @@ export default function App() {
             </div>
           </form>
 
-          {/* Semakan Status Tiket Aduan / Track Complaint */}
-          <div className="border-t border-slate-200 bg-slate-50/80 p-6 sm:p-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-              <div>
-                <h4 className="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
-                  <i className="fa-solid fa-clipboard-check text-emerald-600"></i>
-                  <span>{lang === 'BM' ? 'Semak Status Tiket Aduan' : 'Check Complaint Ticket Status'}</span>
-                </h4>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {lang === 'BM'
-                    ? 'Masukkan nombor rujukan aduan (contoh: JKRNS-2026-881924) untuk melihat status tindakan terkini.'
-                    : 'Enter complaint reference (e.g. JKRNS-2026-881924) to track current maintenance status.'}
-                </p>
+          {/* Notis Kawalan Akses & Privasi Data e-Aduan (Hanya Boleh Dilihat Oleh Admin) */}
+          <div className="border-t border-slate-200 bg-slate-50/90 p-6 sm:p-10">
+            <div className="max-w-3xl mx-auto bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-slate-900 text-[#FFD100] flex items-center justify-center text-xl flex-shrink-0 shadow-md">
+                  <i className="fa-solid fa-user-shield"></i>
+                </div>
+                <div className="space-y-1 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="font-black text-slate-900 text-sm sm:text-base">
+                      Kawalan Akses &amp; Perlindungan Privasi e-Aduan
+                    </h4>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                      Akses Terhad (Admin Sahaja)
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Demi memelihara kerahsiaan dan perlindungan data peribadi pengadu selaras dengan Akta Perlindungan Data Peribadi 2010 (Akta 709), <strong>antaramuka senarai aduan yang didaftarkan dan modul semakan status penuh hanya boleh diakses oleh Pegawai Pentadbir JKR yang disahkan</strong>.
+                  </p>
+                </div>
               </div>
 
-              <form onSubmit={handleTicketLookup} className="flex gap-2 w-full md:w-auto">
-                <input
-                  type="text"
-                  value={ticketSearchInput}
-                  onChange={(e) => setTicketSearchInput(e.target.value)}
-                  placeholder="JKRNS-2026-XXXXXX"
-                  className="px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-mono w-full sm:w-56 focus:outline-none focus:ring-2 focus:ring-[#FFD100]"
-                />
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="text-xs text-slate-600 space-y-0.5">
+                  <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <i className="fa-solid fa-key text-amber-500"></i>
+                    <span>Log Masuk Pentadbir JKR (Admin):</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-mono">
+                    Username: <span className="font-bold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200">admin</span> &nbsp;|&nbsp; 
+                    Password: <span className="font-bold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200">123</span>
+                  </div>
+                </div>
+
                 <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#111827] hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors whitespace-nowrap cursor-pointer"
+                  type="button"
+                  onClick={() => {
+                    if (isAdminLoggedIn) {
+                      setShowAdminPortal(true);
+                    } else {
+                      setShowAdminLoginModal(true);
+                    }
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-[#111827] hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer whitespace-nowrap"
                 >
-                  {lang === 'BM' ? 'Semak' : 'Track'}
+                  <i className="fa-solid fa-right-to-bracket text-[#FFD100]"></i>
+                  <span>{isAdminLoggedIn ? 'Buka Modul Pentadbir (Aktif)' : 'Log Masuk Pentadbir'}</span>
                 </button>
-              </form>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-2">
+                <span className="flex items-center gap-1.5">
+                  <i className="fa-solid fa-cloud text-sky-500"></i>
+                  <span>Disimpan &amp; disegerakkan ke pangkalan data Cloudflare JKR Negeri Sembilan</span>
+                </span>
+                <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                  <i className="fa-solid fa-circle-check"></i>
+                  <span>Keselamatan Data Terpelihara</span>
+                </span>
+              </div>
             </div>
-
-            {/* Found Ticket Card */}
-            {foundTicket && (
-              <div className="bg-white p-5 rounded-2xl border-l-4 border-emerald-500 border-y border-r border-slate-200 shadow-md mt-3 animate-fadeIn space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
-                      {foundTicket.id}
-                    </span>
-                    <span className="text-xs font-bold text-slate-800">{foundTicket.category}</span>
-                    <span className="text-xs text-slate-500">({foundTicket.district})</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                      <i className="fa-solid fa-clock-rotate-left"></i>
-                      <span>Status: {foundTicket.status}</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
-                      <i className="fa-solid fa-cloud text-sky-500"></i>
-                      <span>Cloudflare</span>
-                    </span>
-                  </div>
-                </div>
-
-                <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  {foundTicket.description}
-                </p>
-
-                {foundTicket.image && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-slate-500">Bukti Gambar:</span>
-                    <img
-                      src={foundTicket.image}
-                      alt="Gambar Bukti Aduan"
-                      className="h-14 w-14 object-cover rounded-lg border border-slate-300 shadow-sm"
-                    />
-                  </div>
-                )}
-
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
-                  <div className="flex flex-wrap gap-4">
-                    <span><i className="fa-solid fa-location-dot text-[#DC2626] mr-1"></i>{foundTicket.gps}</span>
-                    <span><i className="fa-solid fa-calendar mr-1 text-slate-400"></i>{foundTicket.timestamp}</span>
-                    <span><i className="fa-solid fa-user mr-1 text-slate-400"></i>{foundTicket.name}</span>
-                  </div>
-
-                  {/* Simulator Kemaskini Status bagi Pentadbir / Demonstrasi */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Tukar Status:</span>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateTicketStatus(foundTicket.id, 'Tindakan Pembaikan')}
-                      className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 cursor-pointer"
-                    >
-                      Pembaikan
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateTicketStatus(foundTicket.id, 'Selesai')}
-                      className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer"
-                    >
-                      Selesai
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Senarai Rekod Aduan Disimpan di Cloudflare */}
-            {submittedComplaints.length > 0 && !foundTicket && (
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                    <i className="fa-solid fa-database text-slate-500"></i>
-                    <span>
-                      {lang === 'BM'
-                        ? 'Senarai Aduan Didaftarkan (Disimpan ke Cloudflare)'
-                        : 'Complaints Stored in Cloudflare'}
-                    </span>
-                    <span className="ml-1 text-[11px] text-emerald-600 font-normal">
-                      ({submittedComplaints.length} rekod)
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={refreshBackendData}
-                    className="text-[11px] font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
-                  >
-                    <i className="fa-solid fa-rotate-right"></i>
-                    <span>Segar Semula</span>
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {submittedComplaints.slice(0, 5).map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2.5 hover:border-[#FFD100] transition-colors"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
-                            {item.id}
-                          </span>
-                          <span className="text-slate-800 font-semibold">{item.category}</span>
-                          <span className="text-slate-500">({item.district})</span>
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-100">
-                            <i className="fa-solid fa-cloud text-sky-500"></i>
-                            <span>Cloudflare</span>
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 line-clamp-1">{item.description}</p>
-                      </div>
-
-                      <div className="flex items-center gap-2 self-start sm:self-center">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                            item.status === 'Selesai'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : item.status === 'Tindakan Pembaikan'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-blue-100 text-blue-800'
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                        <span className="text-slate-400 text-[11px]">{item.timestamp}</span>
-                        <button
-                          type="button"
-                          onClick={() => setFoundTicket(item)}
-                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold cursor-pointer"
-                        >
-                          Perincian
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </section>
@@ -2316,6 +2306,13 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Modal Log Masuk Pentadbir (Admin) */}
+      <AdminLoginModal
+        isOpen={showAdminLoginModal}
+        onClose={() => setShowAdminLoginModal(false)}
+        onLoginSuccess={handleAdminLoginSuccess}
+      />
     </div>
   );
 }

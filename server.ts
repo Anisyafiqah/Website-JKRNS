@@ -324,6 +324,63 @@ async function startServer() {
     });
   });
 
+  // POST /api/admin/login - Admin authentication
+  app.post('/api/admin/login', (req: Request, res: Response) => {
+    const { username, password } = req.body;
+    if (username === 'admin' && password === '123') {
+      res.json({
+        success: true,
+        message: 'Log masuk pentadbir berjaya',
+        token: 'jkr-ns-admin-session-token-2026',
+        user: {
+          username: 'admin',
+          name: 'Pentadbir Utama JKR NS',
+          role: 'Administrator',
+          department: 'Bahagian Jalan & Infrastruktur Negeri Sembilan'
+        }
+      });
+    } else {
+      res.status(401).json({
+        success: false,
+        error: 'Nama pengguna atau kata laluan salah. Sila cuba lagi.'
+      });
+    }
+  });
+
+  // GET /api/admin/verify - Verify admin token
+  app.get('/api/admin/verify', (req: Request, res: Response) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.includes('jkr-ns-admin-session-token-2026')) {
+      res.json({
+        success: true,
+        authenticated: true,
+        user: {
+          username: 'admin',
+          name: 'Pentadbir Utama JKR NS',
+          role: 'Administrator'
+        }
+      });
+    } else {
+      res.status(401).json({ success: false, authenticated: false });
+    }
+  });
+
+  // DELETE /api/aduan/:id - Admin delete complaint
+  app.delete('/api/aduan/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const records = await ensureDataStore();
+      const updated = records.filter((r) => r.id.toUpperCase() !== id.toUpperCase());
+      if (updated.length === records.length) {
+        return res.status(404).json({ success: false, error: 'Aduan tidak dijumpai' });
+      }
+      await writeDataStore(updated);
+      res.json({ success: true, message: `Aduan ${id} telah berjaya dipadamkan.` });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
   // GET /api/aduan - List all complaints
   app.get('/api/aduan', async (req: Request, res: Response) => {
     try {
