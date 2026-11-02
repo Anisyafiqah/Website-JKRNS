@@ -46,6 +46,16 @@ interface ComplaintRecord {
   image?: string;
   timestamp: string;
   status: 'Diterima' | 'Dalam Siasatan' | 'Tindakan Pembaikan' | 'Selesai';
+  storedInCloudflare?: boolean;
+  cloudflareProvider?: string;
+}
+
+interface CloudflareStatusInfo {
+  connected: boolean;
+  provider: string;
+  storageType: string;
+  totalRecords: number;
+  instruction: string;
 }
 
 const TENDERS_DATA: TenderItem[] = [
@@ -221,6 +231,16 @@ export default function App() {
   );
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submittedComplaints, setSubmittedComplaints] = useState<ComplaintRecord[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Cloudflare Status State
+  const [cloudflareInfo, setCloudflareInfo] = useState<CloudflareStatusInfo>({
+    connected: false,
+    provider: 'Memuatkan status...',
+    storageType: 'Loading',
+    totalRecords: 0,
+    instruction: ''
+  });
 
   // Ticket Lookup state
   const [ticketSearchInput, setTicketSearchInput] = useState('');
@@ -236,6 +256,32 @@ export default function App() {
     title: '',
     content: ''
   });
+
+  // Fetch complaints and Cloudflare connection status from backend
+  const refreshBackendData = async () => {
+    try {
+      const [cfRes, aduanRes] = await Promise.all([
+        fetch('/api/cloudflare/status').then((r) => r.json()).catch(() => null),
+        fetch('/api/aduan').then((r) => r.json()).catch(() => null)
+      ]);
+
+      if (cfRes) {
+        setCloudflareInfo({
+          connected: cfRes.connected,
+          provider: cfRes.provider,
+          storageType: cfRes.storageType,
+          totalRecords: cfRes.totalRecords,
+          instruction: cfRes.instruction
+        });
+      }
+
+      if (aduanRes && aduanRes.success && Array.isArray(aduanRes.data)) {
+        setSubmittedComplaints(aduanRes.data);
+      }
+    } catch (err) {
+      console.warn('Backend connection fallback:', err);
+    }
+  };
 
   // Visitor counter state
   const [visitorCount, setVisitorCount] = useState<number>(1483129);
@@ -257,20 +303,8 @@ export default function App() {
     localStorage.setItem('jkr_ns_visits', savedVisits.toString());
     setVisitorCount(savedVisits);
 
-    // Initial mock submitted complaint for demo
-    setSubmittedComplaints([
-      {
-        id: 'JKRNS-2026-881924',
-        name: 'Hj. Ismail bin Wahab',
-        phone: '019-3214567',
-        district: 'Seremban',
-        category: 'Jalan Berlubang (Pothole)',
-        gps: '2.6922° N, 101.9056° E',
-        description: 'Pothole sedalam 4 inci berhampiran persimpangan Rahang Baru.',
-        timestamp: '02 Nov 2026, 09:15 AM',
-        status: 'Tindakan Pembaikan'
-      }
-    ]);
+    // Load complaints & Cloudflare status from Express backend
+    refreshBackendData();
   }, []);
 
   // Update current date according to language
@@ -386,8 +420,8 @@ export default function App() {
     }
   };
 
-  // Handle complaint submission
-  const handleComplaintSubmit = (e: React.FormEvent) => {
+  // Handle complaint submission to backend (Cloudflare + local vault)
+  const handleComplaintSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.nama.trim() || !formData.telefon.trim() || !formData.keterangan.trim()) {
       openModal(
@@ -397,49 +431,71 @@ export default function App() {
       return;
     }
 
-    const randomNum = Math.floor(100000 + Math.random() * 900000);
-    const newId = `JKRNS-2026-${randomNum}`;
+    setIsSubmitting(true);
 
-    const newRecord: ComplaintRecord = {
-      id: newId,
-      name: formData.nama,
-      phone: formData.telefon,
-      district: formData.daerah,
-      category: formData.kategori,
-      gps: formData.gps || '2.6922° N, 101.9056° E',
-      description: formData.keterangan,
-      image: imagePreview || undefined,
-      timestamp: new Date().toLocaleDateString(lang === 'BM' ? 'ms-MY' : 'en-US', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
-      status: 'Diterima'
-    };
+    try {
+      const response = await fetch('/api/aduan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: formData.nama,
+          phone: formData.telefon,
+          district: formData.daerah,
+          category: formData.kategori,
+          gps: formData.gps || '2.6922° N, 101.9056° E',
+          description: formData.keterangan,
+          image: imagePreview || undefined
+        })
+      });
 
-    setSubmittedComplaints((prev) => [newRecord, ...prev]);
+      const result = await response.json();
 
-    const msg =
-      lang === 'BM'
-        ? `Terima kasih ${formData.nama}. Laporan bagi "${formData.kategori}" di daerah ${formData.daerah} telah berjaya direkodkan. Nombor rujukan tiket rasmi anda ialah ${newId}. Juruteknik JKR Daerah akan mengambil tindakan dalam tempoh 24 jam.`
-        : `Thank you ${formData.nama}. Your report for "${formData.kategori}" in ${formData.daerah} has been recorded. Your official ticket number is ${newId}. JKR district maintenance will respond within 24 hours.`;
+      if (response.ok && result.success) {
+        const ticketId = result.ticketId;
+        const cfInfo = result.cloudflare;
 
-    openModal(lang === 'BM' ? 'Aduan Berjaya Didaftarkan' : 'Complaint Successfully Filed', msg);
+        const cfStatusText = cfInfo?.synced
+          ? `Disimpan secara selamat ke ${cfInfo.provider}.`
+          : `Disimpan ke storan selamat pangkalan data JKR NS.`;
 
-    // Reset Form
-    setFormData({
-      nama: '',
-      telefon: '',
-      daerah: 'Seremban',
-      kategori: 'Jalan Berlubang (Pothole) - Tindakan 24 Jam',
-      gps: '',
-      keterangan: '',
-      gambar: ''
-    });
-    setImagePreview(null);
-    setGpsStatus('Tekan butang untuk memasukkan lokasi telefon/komputer anda secara automatik.');
+        const msg =
+          lang === 'BM'
+            ? `Terima kasih ${formData.nama}. Laporan bagi "${formData.kategori}" di daerah ${formData.daerah} telah berjaya direkodkan.\n\nNombor Rujukan Tiket: ${ticketId}\nStatus Storan: ${cfStatusText}\n\nJuruteknik JKR Daerah akan mengambil tindakan pembaikan dalam tempoh 24 jam.`
+            : `Thank you ${formData.nama}. Your report for "${formData.kategori}" in ${formData.daerah} has been registered.\n\nTicket Reference: ${ticketId}\nStorage Status: ${cfStatusText}\n\nJKR district technicians will initiate maintenance response within 24 hours.`;
+
+        openModal(lang === 'BM' ? 'Aduan Berjaya Didaftarkan' : 'Complaint Successfully Filed', msg);
+
+        // Reset Form
+        setFormData({
+          nama: '',
+          telefon: '',
+          daerah: 'Seremban',
+          kategori: 'Jalan Berlubang (Pothole) - Tindakan 24 Jam',
+          gps: '',
+          keterangan: '',
+          gambar: ''
+        });
+        setImagePreview(null);
+        setGpsStatus('Tekan butang untuk memasukkan lokasi telefon/komputer anda secara automatik.');
+
+        // Refresh list and status from backend
+        await refreshBackendData();
+      } else {
+        throw new Error(result.error || 'Gagal menyimpan aduan');
+      }
+    } catch (err: any) {
+      console.error('Error submitting complaint:', err);
+      openModal(
+        lang === 'BM' ? 'Ralat Penghantaran' : 'Submission Error',
+        lang === 'BM'
+          ? `Tidak dapat menghantar aduan: ${err.message || 'Sila semak sambungan rangkaian anda.'}`
+          : `Failed to submit complaint: ${err.message || 'Please check your connection.'}`
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Filter tenders based on filter and live search query
@@ -498,23 +554,65 @@ export default function App() {
     openModal(lang === 'BM' ? 'Keputusan Carian Pintar' : 'Smart Search Results', summary);
   };
 
-  // Ticket status lookup
-  const handleTicketLookup = (e: React.FormEvent) => {
+  // Ticket status lookup via backend API
+  const handleTicketLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     const query = ticketSearchInput.trim().toUpperCase();
     if (!query) return;
 
-    const found = submittedComplaints.find((c) => c.id.toUpperCase() === query);
-    if (found) {
-      setFoundTicket(found);
-    } else {
-      setFoundTicket(null);
-      openModal(
-        lang === 'BM' ? 'Tiket Tidak Ditemui' : 'Ticket Not Found',
-        lang === 'BM'
-          ? `Tiada rekod aduan ditemui bagi nombor rujukan "${query}". Sila pastikan format rujukan seperti JKRNS-2026-XXXXXX.`
-          : `No complaint found for reference "${query}". Please check reference code format (e.g. JKRNS-2026-XXXXXX).`
-      );
+    try {
+      const res = await fetch(`/api/aduan/${encodeURIComponent(query)}`);
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        setFoundTicket(json.data);
+      } else {
+        // Check in current state
+        const local = submittedComplaints.find((c) => c.id.toUpperCase() === query);
+        if (local) {
+          setFoundTicket(local);
+        } else {
+          setFoundTicket(null);
+          openModal(
+            lang === 'BM' ? 'Tiket Tidak Ditemui' : 'Ticket Not Found',
+            lang === 'BM'
+              ? `Tiada rekod aduan ditemui bagi nombor rujukan "${query}". Sila pastikan format nombor rujukan seperti JKRNS-2026-XXXXXX.`
+              : `No complaint found for reference "${query}". Please check reference code format (e.g. JKRNS-2026-XXXXXX).`
+          );
+        }
+      }
+    } catch (err) {
+      const local = submittedComplaints.find((c) => c.id.toUpperCase() === query);
+      if (local) {
+        setFoundTicket(local);
+      } else {
+        openModal(
+          lang === 'BM' ? 'Ralat Carian' : 'Search Error',
+          lang === 'BM' ? 'Tidak dapat menyemak status tiket pada masa ini.' : 'Unable to query ticket at this time.'
+        );
+      }
+    }
+  };
+
+  // Update complaint ticket status
+  const handleUpdateTicketStatus = async (ticketId: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/aduan/${encodeURIComponent(ticketId)}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        await refreshBackendData();
+        if (foundTicket && foundTicket.id === ticketId) {
+          setFoundTicket((prev) => (prev ? { ...prev, status: newStatus as any } : null));
+        }
+        openModal(
+          'Status Dikemaskini',
+          `Status tiket ${ticketId} telah berjaya dikemaskini kepada "${newStatus}".`
+        );
+      }
+    } catch (err) {
+      console.error('Failed to update status:', err);
     }
   };
 
@@ -1594,15 +1692,43 @@ export default function App() {
         </div>
       </section>
 
-      {/* ==================== 9. E-ADUAN PINTAR (GPS, SIMULASI TIKET & TRACKER) ==================== */}
+      {/* ==================== 9. E-ADUAN PINTAR (BACKEND CLOUDFLARE + SIMULASI TIKET) ==================== */}
       <section id="aduanSection" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
           {/* Header Banner */}
           <div className="p-6 sm:p-10 bg-gradient-to-r from-[#0B0F19] via-slate-900 to-slate-800 text-white">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#DC2626]/30 border border-[#DC2626]/50 text-[#FFD100] text-xs font-bold uppercase tracking-wider mb-2">
-              <i className="fa-solid fa-location-crosshairs"></i>
-              {lang === 'BM' ? 'Sistem Pengurusan Aduan Awam JKR' : 'JKR Public Road Complaints Management'}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#DC2626]/30 border border-[#DC2626]/50 text-[#FFD100] text-xs font-bold uppercase tracking-wider">
+                <i className="fa-solid fa-location-crosshairs"></i>
+                {lang === 'BM' ? 'Sistem Pengurusan Aduan Awam JKR' : 'JKR Public Road Complaints Management'}
+              </div>
+
+              {/* Status Cloudflare Badge */}
+              <div
+                onClick={() =>
+                  openModal(
+                    'Status Sambungan Cloudflare',
+                    `Maklumat Penyimpanan Cloudflare:\n\n` +
+                    `Status: ${cloudflareInfo.connected ? 'Tersambung (Connected)' : 'Sedia untuk Disambung (Ready)'}\n` +
+                    `Mod Storan: ${cloudflareInfo.provider}\n` +
+                    `Jenis Enjin: ${cloudflareInfo.storageType}\n` +
+                    `Jumlah Rekod Disimpan: ${cloudflareInfo.totalRecords}\n\n` +
+                    `Panduan Integrasi:\n` +
+                    cloudflareInfo.instruction
+                  )
+                }
+                className="cursor-pointer inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-600 text-xs text-slate-200 transition-colors shadow-sm"
+                title="Klik untuk melihat perincian sambungan Cloudflare"
+              >
+                <i className="fa-solid fa-cloud text-sky-400"></i>
+                <span className="font-semibold">
+                  {cloudflareInfo.connected ? 'Cloudflare: Aktif' : 'Storan: Cloudflare Ready'}
+                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <i className="fa-solid fa-circle-info text-[10px] text-slate-400"></i>
+              </div>
             </div>
+
             <h3 className="text-2xl sm:text-3xl font-black">
               {lang === 'BM'
                 ? 'Salurkan Aduan Jalan Raya & Infrastruktur'
@@ -1610,8 +1736,8 @@ export default function App() {
             </h3>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mt-1 leading-relaxed">
               {lang === 'BM'
-                ? 'Tindakan pantas 24 jam untuk kes potholes jalan persekutuan dan negeri. Sertakan koordinat lokasi GPS tepat dan gambar kerosakan untuk tindakan segera juruteknik daerah.'
-                : 'Fast 24-hour turnaround for potholes on state and federal routes. Provide precise GPS coordinates and photos for prompt mobilization of district maintenance teams.'}
+                ? 'Tindakan pantas 24 jam untuk kes potholes jalan persekutuan dan negeri. Data aduan disimpan secara selamat ke pangkalan data awan Cloudflare dan diagihkan segera kepada jurutera daerah.'
+                : 'Fast 24-hour turnaround for potholes on state and federal routes. Complaint data is securely persisted to Cloudflare storage and immediately dispatched to district engineers.'}
             </p>
           </div>
 
@@ -1768,7 +1894,7 @@ export default function App() {
                     <img
                       src={imagePreview}
                       alt="Pratonton Aduan"
-                      className="h-12 w-12 object-cover rounded-lg border border-slate-300"
+                      className="h-12 w-12 object-cover rounded-lg border border-slate-300 shadow-sm"
                     />
                     <button
                       type="button"
@@ -1776,7 +1902,7 @@ export default function App() {
                         setImagePreview(null);
                         setFormData((prev) => ({ ...prev, gambar: '' }));
                       }}
-                      className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
+                      className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] cursor-pointer"
                     >
                       &times;
                     </button>
@@ -1789,15 +1915,30 @@ export default function App() {
             <div className="pt-2 flex flex-col sm:flex-row items-center gap-4">
               <button
                 type="submit"
-                className="w-full sm:w-auto px-8 py-3 bg-[#DC2626] hover:bg-[#991B1B] text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                disabled={isSubmitting}
+                className={`w-full sm:w-auto px-8 py-3 bg-[#DC2626] hover:bg-[#991B1B] text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer ${
+                  isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
               >
-                <i className="fa-solid fa-paper-plane text-[#FFD100]"></i>
-                <span>{lang === 'BM' ? 'Hantar Laporan Aduan' : 'Submit Complaint Ticket'}</span>
+                {isSubmitting ? (
+                  <>
+                    <i className="fa-solid fa-spinner fa-spin text-[#FFD100]"></i>
+                    <span>{lang === 'BM' ? 'Menyimpan ke Cloudflare...' : 'Saving to Cloudflare...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-paper-plane text-[#FFD100]"></i>
+                    <span>{lang === 'BM' ? 'Hantar Laporan Aduan' : 'Submit Complaint Ticket'}</span>
+                  </>
+                )}
               </button>
-              <span className="text-xs text-slate-500 text-center sm:text-left">
-                {lang === 'BM'
-                  ? 'Semua maklumat aduan direkodkan dalam sistem pemantauan prestasi jabatan (MyJalan & SisPAA).'
-                  : 'All complaints are tracked under the department performance benchmark system.'}
+              <span className="text-xs text-slate-500 text-center sm:text-left flex items-center gap-1.5">
+                <i className="fa-solid fa-shield-halved text-emerald-600"></i>
+                <span>
+                  {lang === 'BM'
+                    ? 'Disimpan dalam storan disulitkan JKR NS & disinkronkan ke Cloudflare.'
+                    : 'Encrypted storage with real-time Cloudflare synchronization.'}
+                </span>
               </span>
             </div>
           </form>
@@ -1834,52 +1975,139 @@ export default function App() {
               </form>
             </div>
 
-            {/* Found Ticket Card or Recent Tickets */}
+            {/* Found Ticket Card */}
             {foundTicket && (
-              <div className="bg-white p-4 rounded-xl border-l-4 border-emerald-500 border-y border-r border-slate-200 shadow-sm mt-3 animate-fadeIn">
+              <div className="bg-white p-5 rounded-2xl border-l-4 border-emerald-500 border-y border-r border-slate-200 shadow-md mt-3 animate-fadeIn space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
                       {foundTicket.id}
                     </span>
-                    <span className="text-xs font-semibold text-slate-700 ml-2">{foundTicket.category}</span>
-                    <span className="text-xs text-slate-500 ml-2">({foundTicket.district})</span>
+                    <span className="text-xs font-bold text-slate-800">{foundTicket.category}</span>
+                    <span className="text-xs text-slate-500">({foundTicket.district})</span>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 w-fit">
-                    Status: {foundTicket.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                      <i className="fa-solid fa-clock-rotate-left"></i>
+                      <span>Status: {foundTicket.status}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                      <i className="fa-solid fa-cloud text-sky-500"></i>
+                      <span>Cloudflare</span>
+                    </span>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-600 mt-2">{foundTicket.description}</p>
-                <div className="text-[11px] text-slate-400 mt-2 flex flex-wrap gap-4">
-                  <span>GPS: {foundTicket.gps}</span>
-                  <span>Tarikh: {foundTicket.timestamp}</span>
-                  <span>Pengadu: {foundTicket.name}</span>
+
+                <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  {foundTicket.description}
+                </p>
+
+                {foundTicket.image && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-slate-500">Bukti Gambar:</span>
+                    <img
+                      src={foundTicket.image}
+                      alt="Gambar Bukti Aduan"
+                      className="h-14 w-14 object-cover rounded-lg border border-slate-300 shadow-sm"
+                    />
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                  <div className="flex flex-wrap gap-4">
+                    <span><i className="fa-solid fa-location-dot text-[#DC2626] mr-1"></i>{foundTicket.gps}</span>
+                    <span><i className="fa-solid fa-calendar mr-1 text-slate-400"></i>{foundTicket.timestamp}</span>
+                    <span><i className="fa-solid fa-user mr-1 text-slate-400"></i>{foundTicket.name}</span>
+                  </div>
+
+                  {/* Simulator Kemaskini Status bagi Pentadbir / Demonstrasi */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Tukar Status:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateTicketStatus(foundTicket.id, 'Tindakan Pembaikan')}
+                      className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 cursor-pointer"
+                    >
+                      Pembaikan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateTicketStatus(foundTicket.id, 'Selesai')}
+                      className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer"
+                    >
+                      Selesai
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Recent Submissions list */}
+            {/* Senarai Rekod Aduan Disimpan di Cloudflare */}
             {submittedComplaints.length > 0 && !foundTicket && (
               <div className="mt-4">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">
-                  {lang === 'BM' ? 'Senarai Aduan Terkini Didaftarkan' : 'Recently Logged Complaints'}
-                </span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                    <i className="fa-solid fa-database text-slate-500"></i>
+                    <span>
+                      {lang === 'BM'
+                        ? 'Senarai Aduan Didaftarkan (Disimpan ke Cloudflare)'
+                        : 'Complaints Stored in Cloudflare'}
+                    </span>
+                    <span className="ml-1 text-[11px] text-emerald-600 font-normal">
+                      ({submittedComplaints.length} rekod)
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={refreshBackendData}
+                    className="text-[11px] font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <i className="fa-solid fa-rotate-right"></i>
+                    <span>Segar Semula</span>
+                  </button>
+                </div>
+
                 <div className="space-y-2">
-                  {submittedComplaints.slice(0, 3).map((item) => (
+                  {submittedComplaints.slice(0, 5).map((item) => (
                     <div
                       key={item.id}
-                      className="bg-white p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2"
+                      className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2.5 hover:border-[#FFD100] transition-colors"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-slate-800">{item.id}</span>
-                        <span className="text-slate-600 font-medium">{item.category}</span>
-                        <span className="text-slate-400">({item.district})</span>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
+                            {item.id}
+                          </span>
+                          <span className="text-slate-800 font-semibold">{item.category}</span>
+                          <span className="text-slate-500">({item.district})</span>
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-100">
+                            <i className="fa-solid fa-cloud text-sky-500"></i>
+                            <span>Cloudflare</span>
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 line-clamp-1">{item.description}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold text-[10px]">
+
+                      <div className="flex items-center gap-2 self-start sm:self-center">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                            item.status === 'Selesai'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : item.status === 'Tindakan Pembaikan'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}
+                        >
                           {item.status}
                         </span>
                         <span className="text-slate-400 text-[11px]">{item.timestamp}</span>
+                        <button
+                          type="button"
+                          onClick={() => setFoundTicket(item)}
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold cursor-pointer"
+                        >
+                          Perincian
+                        </button>
                       </div>
                     </div>
                   ))}

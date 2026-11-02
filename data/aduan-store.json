@@ -1,0 +1,28 @@
+[
+  {
+    "id": "JKRNS-2026-951028",
+    "name": "Ahmad bin Razak",
+    "phone": "012-3456789",
+    "district": "Seremban",
+    "category": "Jalan Berlubang (Pothole) - Tindakan 24 Jam",
+    "gps": "2.6922° N, 101.9056° E",
+    "description": "Lubang besar di hadapan Klinik Kesihatan Seremban 2",
+    "timestamp": "02 Nov 2026, 03:51 PG",
+    "status": "Tindakan Pembaikan",
+    "storedInCloudflare": false,
+    "cloudflareProvider": "Local Secured Vault (Pending Cloudflare Connection)"
+  },
+  {
+    "id": "JKRNS-2026-881924",
+    "name": "Hj. Ismail bin Wahab",
+    "phone": "019-3214567",
+    "district": "Seremban",
+    "category": "Jalan Berlubang (Pothole)",
+    "gps": "2.6922° N, 101.9056° E",
+    "description": "Pothole sedalam 4 inci berhampiran persimpangan Rahang Baru.",
+    "timestamp": "02 Nov 2026, 09:15 AM",
+    "status": "Tindakan Pembaikan",
+    "storedInCloudflare": false,
+    "cloudflareProvider": "Local Secured Vault"
+  }
+]
