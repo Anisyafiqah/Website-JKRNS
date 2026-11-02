@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="ms" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Rasmi Jabatan Kerja Raya Negeri Sembilan</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome untuk ikon teknikal & kejuruteraan -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            nsYellow: '#FFD100',
+            nsRed: '#DC2626',
+            nsRedDark: '#991B1B',
+            nsBlack: '#111827',
+            nsBlackPure: '#0B0F19',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --ns-yellow: #FFD100;
+      --ns-red: #DC2626;
+      --ns-black: #111827;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Pelarasan Saiz Teks Kebolehcapaian */
+    body.font-size-small { font-size: 14px; }
+    body.font-size-normal { font-size: 16px; }
+    body.font-size-large { font-size: 18px; }
+
+    /* Mod Kontras Tinggi Sektor Awam */
+    body.high-contrast {
+      background-color: #000000 !important;
+      color: #FFFF00 !important;
+    }
+    body.high-contrast header,
+    body.high-contrast section,
+    body.high-contrast footer,
+    body.high-contrast div,
+    body.high-contrast article,
+    body.high-contrast nav {
+      background-color: #000000 !important;
+      color: #FFFFFF !important;
+      border-color: #FFFF00 !important;
+    }
+    body.high-contrast h1,
+    body.high-contrast h2,
+    body.high-contrast h3,
+    body.high-contrast h4,
+    body.high-contrast span,
+    body.high-contrast p,
+    body.high-contrast label {
+      color: #FFFFFF !important;
+    }
+    body.high-contrast a,
+    body.high-contrast button,
+    body.high-contrast .text-nsYellow,
+    body.high-contrast .text-nsRed {
+      color: #FFFF00 !important;
+    }
+    body.high-contrast input,
+    body.high-contrast select,
+    body.high-contrast textarea {
+      background-color: #1a1a1a !important;
+      color: #FFFF00 !important;
+      border-color: #FFFF00 !important;
+    }
+
+    /* Corak Geometri Adat Perpatih & Bumbung Minangkabau */
+    .perpatih-pattern {
+      background-color: #111827;
+      background-image: 
+        radial-gradient(#FFD100 1.2px, transparent 1.2px), 
+        radial-gradient(#DC2626 1.2px, #111827 1.2px);
+      background-size: 28px 28px;
+      background-position: 0 0, 14px 14px;
+    }
+
+    .slide-fade {
+      transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
+    }
+
+    /* Modal Backdrop */
+    .modal-backdrop {
+      background-color: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(4px);
+    }
+  </style>
+</head>
+<body class="font-size-normal bg-slate-50 text-slate-800 transition-colors duration-200">
+
+  <!-- ==================== 1. HEADER & AKSESIBILITI ==================== -->
+  <header class="w-full bg-white shadow-md sticky top-0 z-50">
+    <!-- Bar Aksesibiliti & Tarikh Terkini -->
+    <div class="bg-nsBlackPure text-slate-200 text-xs px-4 py-2 border-b border-nsYellow/40">
+      <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="font-medium text-slate-300">Portal Rasmi Kerajaan Negeri Sembilan</span>
+          <span class="hidden sm:inline text-slate-600">|</span>
+          <span id="currentDateDisplay" class="hidden sm:inline text-slate-400 font-mono text-[11px]">Isnin, 2 November 2026</span>
+        </div>
+        
+        <div class="flex items-center gap-3">
+          <!-- Saiz Fon -->
+          <div class="flex items-center gap-1 bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700">
+            <span class="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Teks:</span>
+            <button onclick="setFontSize('small')" title="Saiz Kecil" class="px-1.5 py-0.5 hover:text-nsYellow font-bold transition-colors">A-</button>
+            <button onclick="setFontSize('normal')" title="Saiz Asal" class="px-1.5 py-0.5 hover:text-nsYellow font-bold transition-colors">A</button>
+            <button onclick="setFontSize('large')" title="Saiz Besar" class="px-1.5 py-0.5 hover:text-nsYellow font-bold transition-colors">A+</button>
+          </div>
+
+          <!-- Mod Kontras Tinggi -->
+          <button onclick="toggleContrast()" id="btnContrastToggle" class="flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-nsYellow px-2.5 py-1 rounded-lg border border-slate-700 transition-colors">
+            <i class="fa-solid fa-circle-half-stroke text-nsYellow text-xs"></i>
+            <span class="text-xs font-semibold">Kontras</span>
+          </button>
+
+          <!-- Dwi-Bahasa -->
+          <button onclick="toggleLanguage()" class="flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-nsYellow px-2.5 py-1 rounded-lg border border-slate-700 transition-colors font-semibold">
+            <i class="fa-solid fa-globe text-xs text-nsRed"></i>
+            <span id="langText">BM</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Jalur Bendera Negeri Sembilan -->
+    <div class="h-1.5 w-full flex">
+      <div class="h-full w-1/2 bg-nsYellow"></div>
+      <div class="h-full w-1/4 bg-nsRed"></div>
+      <div class="h-full w-1/4 bg-nsBlack"></div>
+    </div>
+
+    <!-- Jenama & Logo Rasmi -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div class="flex items-center justify-between">
+        
+        <!-- Logo Gabungan (Kiri: Jata NS, Kanan: JKR NS) -->
+        <div class="flex items-center gap-3 sm:gap-4">
+          <div class="flex items-center gap-2 p-1.5 bg-white rounded-xl border border-slate-200 shadow-sm">
+            <img src="Jata_Negeri_Sembilan_2.png" alt="Jata Rasmi Kerajaan Negeri Sembilan" class="h-12 sm:h-14 w-auto object-contain transition-transform hover:scale-105">
+            <div class="h-10 w-px bg-slate-200"></div>
+            <img src="jkr_2.jpg" alt="Logo Jabatan Kerja Raya Negeri Sembilan" class="h-12 sm:h-14 w-auto object-contain transition-transform hover:scale-105">
+          </div>
+          <div>
+            <span class="block text-xs uppercase tracking-widest text-slate-500 font-bold">Portal Rasmi</span>
+            <h1 class="text-base sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">
+              JABATAN KERJA RAYA
+            </h1>
+            <p class="text-xs sm:text-sm font-bold text-nsRed tracking-wide flex items-center gap-1">
+              <span>NEGERI SEMBILAN DARUL KHUSUS</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Menu Butang Desktop -->
+        <nav class="hidden lg:flex items-center gap-6 font-semibold text-xs sm:text-sm text-slate-700">
+          <a href="#heroSlider" class="hover:text-nsRed transition-colors py-1">Utama</a>
+          <a href="#aksesPantas" class="hover:text-nsRed transition-colors py-1">Akses Pantas</a>
+          <a href="#kategoriPengguna" class="hover:text-nsRed transition-colors py-1">Kategori</a>
+          <a href="#tenderSection" class="hover:text-nsRed transition-colors py-1 flex items-center gap-1">
+            <span>Tender</span>
+            <span class="w-2 h-2 rounded-full bg-nsRed animate-ping"></span>
+          </a>
+          <a href="#direktoriDaerahSection" class="hover:text-nsRed transition-colors py-1">7 Pejabat Daerah</a>
+          <a href="#aduanSection" class="bg-nsRed hover:bg-nsRedDark text-white px-4 py-2 rounded-xl font-bold shadow-md shadow-nsRed/20 transition-all flex items-center gap-2">
+            <i class="fa-solid fa-headset text-nsYellow"></i>
+            <span>e-Aduan</span>
+          </a>
+        </nav>
+
+        <!-- Butang Mobile Menu Toggle -->
+        <button onclick="toggleMobileNav()" class="lg:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 focus:outline-none">
+          <i class="fa-solid fa-bars text-xl"></i>
+        </button>
+      </div>
+
+      <!-- Menu Dropdown Mobile -->
+      <div id="mobileNavMenu" class="hidden lg:hidden mt-3 pt-3 border-t border-slate-200 space-y-2 text-sm font-semibold">
+        <a href="#heroSlider" onclick="toggleMobileNav()" class="block py-2 px-3 rounded-lg hover:bg-slate-100 text-slate-800">Utama</a>
+        <a href="#aksesPantas" onclick="toggleMobileNav()" class="block py-2 px-3 rounded-lg hover:bg-slate-100 text-slate-800">Akses Pantas</a>
+        <a href="#kategoriPengguna" onclick="toggleMobileNav()" class="block py-2 px-3 rounded-lg hover:bg-slate-100 text-slate-800">Kategori Pengguna</a>
+        <a href="#tenderSection" onclick="toggleMobileNav()" class="block py-2 px-3 rounded-lg hover:bg-slate-100 text-slate-800">Tender & Sebut Harga</a>
+        <a href="#direktoriDaerahSection" onclick="toggleMobileNav()" class="block py-2 px-3 rounded-lg hover:bg-slate-100 text-slate-800">7 Pejabat Daerah</a>
+        <a href="#aduanSection" onclick="toggleMobileNav()" class="block py-2 px-3 rounded-lg bg-nsRed text-white font-bold">e-Aduan Kerosakan</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== 2. HERO SLIDER BERGERAK (CAROUSEL) ==================== -->
+  <section id="heroSlider" class="relative w-full h-[460px] md:h-[540px] overflow-hidden bg-nsBlackPure text-white">
+    <div id="slidesContainer" class="relative w-full h-full">
+      
+      <!-- Slaid 1 -->
+      <div class="hero-slide absolute inset-0 w-full h-full slide-fade opacity-100 z-10 flex items-center perpatih-pattern">
+        <div class="absolute inset-0 bg-gradient-to-r from-nsBlackPure via-nsBlackPure/85 to-transparent"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 w-full">
+          <div class="max-w-2xl space-y-4">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-nsRed/20 border border-nsRed/50 text-red-300 text-xs font-bold uppercase tracking-wider">
+              <span class="w-2 h-2 rounded-full bg-nsRed animate-pulse"></span>
+              Penyambung Warisan & Kejuruteraan
+            </div>
+            <h2 class="text-2xl sm:text-4xl md:text-5xl font-black text-white leading-tight">
+              Penaiktarafan Laluan Persekutuan &amp; <span class="text-nsYellow">Jaringan Jalan Negeri</span>
+            </h2>
+            <p class="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed">
+              Memacu pembangunan jaringan infrastruktur berkualiti tinggi merentasi 7 daerah di Negeri Sembilan berpaksikan kemampanan teknologi dan kelancaran pergerakan rakyat.
+            </p>
+            <div class="flex flex-wrap gap-3 pt-2">
+              <a href="#tenderSection" class="px-5 py-2.5 sm:py-3 bg-nsYellow text-nsBlack font-bold rounded-xl text-xs sm:text-sm hover:bg-yellow-400 transition-all flex items-center gap-2 shadow-lg shadow-nsYellow/20">
+                <i class="fa-solid fa-file-signature"></i> Senarai Tender Terkini
+              </a>
+              <a href="#aduanSection" class="px-5 py-2.5 sm:py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-xl text-xs sm:text-sm transition-all flex items-center gap-2">
+                <i class="fa-solid fa-headset text-nsYellow"></i> Salurkan Aduan
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slaid 2 -->
+      <div class="hero-slide absolute inset-0 w-full h-full slide-fade opacity-0 z-0 flex items-center bg-slate-900">
+        <div class="absolute inset-0 bg-cover bg-center" style="background-image: radial-gradient(circle at 75% 50%, rgba(220, 38, 38, 0.4) 0%, transparent 60%), linear-gradient(135deg, #0b0f19 0%, #1e293b 100%);"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 w-full">
+          <div class="max-w-2xl space-y-4">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-nsYellow/20 border border-nsYellow/50 text-nsYellow text-xs font-bold uppercase tracking-wider">
+              <i class="fa-solid fa-bolt"></i>
+              Tindakan Pantas MyJalan
+            </div>
+            <h2 class="text-2xl sm:text-4xl md:text-5xl font-black text-white leading-tight">
+              Inisiatif Sifar Pothole &amp; <span class="text-nsYellow">Pembaikan Lubang 24 Jam</span>
+            </h2>
+            <p class="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed">
+              Tindakan tampalan segera bagi keselamatan pengguna jalan raya di Seremban, Port Dickson, Jempol, Jelebu, Kuala Pilah, Rembau, dan Tampin dengan integrasi koordinat GPS masa nyata.
+            </p>
+            <div class="flex flex-wrap gap-3 pt-2">
+              <a href="#aduanSection" class="px-5 py-2.5 sm:py-3 bg-nsRed hover:bg-nsRedDark text-white font-bold rounded-xl text-xs sm:text-sm transition-all flex items-center gap-2 shadow-lg shadow-nsRed/25">
+                <i class="fa-solid fa-triangle-exclamation text-nsYellow"></i> Lapor Lubang Jalan
+              </a>
+              <a href="#direktoriDaerahSection" class="px-5 py-2.5 sm:py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-xl text-xs sm:text-sm transition-all flex items-center gap-2">
+                <i class="fa-solid fa-map-location-dot text-nsYellow"></i> Direktori Jurutera Daerah
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slaid 3 -->
+      <div class="hero-slide absolute inset-0 w-full h-full slide-fade opacity-0 z-0 flex items-center bg-slate-950">
+        <div class="absolute inset-0 bg-gradient-to-r from-nsBlackPure via-slate-900 to-amber-950/60"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 w-full">
+          <div class="max-w-2xl space-y-4">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+              <i class="fa-solid fa-building-columns"></i>
+              Warisan & Fasiliti Awam
+            </div>
+            <h2 class="text-2xl sm:text-4xl md:text-5xl font-black text-white leading-tight">
+              Penyelenggaraan Jambatan &amp; <span class="text-nsYellow">Seni Bina Minangkabau</span>
+            </h2>
+            <p class="text-slate-300 text-xs sm:text-sm md:text-base leading-relaxed">
+              Memelihara kedaulatan estetika Adat Perpatih dalam reka bentuk kejuruteraan struktur bangunan awam dan infrastruktur jambatan Negeri Sembilan.
+            </p>
+            <div class="flex flex-wrap gap-3 pt-2">
+              <a href="#aksesPantas" class="px-5 py-2.5 sm:py-3 bg-nsYellow text-nsBlack font-bold rounded-xl text-xs sm:text-sm hover:bg-yellow-400 transition-all flex items-center gap-2">
+                <i class="fa-solid fa-layer-group"></i> Akses Perkhidmatan
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Butang Kawalan Slider (Kiri/Kanan) -->
+    <button onclick="prevSlide()" aria-label="Slaid Sebelum" class="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-nsRed text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all">
+      <i class="fa-solid fa-chevron-left text-sm sm:text-base"></i>
+    </button>
+    <button onclick="nextSlide()" aria-label="Slaid Seterusnya" class="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-30 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-nsRed text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all">
+      <i class="fa-solid fa-chevron-right text-sm sm:text-base"></i>
+    </button>
+
+    <!-- Titik Indikator Slider -->
+    <div class="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+      <button onclick="goToSlide(0)" class="slide-indicator w-8 h-2 rounded-full bg-nsYellow transition-all" aria-label="Ke Slaid 1"></button>
+      <button onclick="goToSlide(1)" class="slide-indicator w-3 h-2 rounded-full bg-white/40 hover:bg-white transition-all" aria-label="Ke Slaid 2"></button>
+      <button onclick="goToSlide(2)" class="slide-indicator w-3 h-2 rounded-full bg-white/40 hover:bg-white transition-all" aria-label="Ke Slaid 3"></button>
+    </div>
+  </section>
+
+  <!-- ==================== 3. BAR CARIAN PINTAR ==================== -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-40">
+    <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-5 border border-slate-200">
+      <div class="flex flex-col md:flex-row items-center gap-3">
+        <div class="w-full md:w-auto flex items-center gap-2 text-slate-800 font-bold text-sm whitespace-nowrap">
+          <div class="w-8 h-8 rounded-lg bg-nsRed text-white flex items-center justify-center">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </div>
+          <span>Carian Pintar JKR:</span>
+        </div>
+        <div class="relative w-full">
+          <input type="text" id="liveSearchInput" onkeyup="handleSearchFilter()" placeholder="Cari tender, nama jurutera daerah, jalan ditutup, atau borang permohonan..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-nsYellow focus:border-transparent transition-all">
+          <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+        </div>
+        <button onclick="showQuickSearchResult()" class="w-full md:w-auto px-6 py-2.5 bg-nsBlack hover:bg-slate-800 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2">
+          <span>Cari</span>
+          <i class="fa-solid fa-arrow-right text-nsYellow text-xs"></i>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 4. AKSES PANTAS (QUICK SERVICES) ==================== -->
+  <section id="aksesPantas" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h3 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Perkhidmatan & Akses Pantas</h3>
+        <p class="text-xs sm:text-sm text-slate-600">Pautan segera ke modul teknikal dan aplikasi rasmi kerajaan.</p>
+      </div>
+      <div class="h-1 flex-1 mx-6 bg-slate-200 hidden md:block rounded"></div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <!-- Kad 1 -->
+      <a href="#tenderSection" class="group bg-white p-5 rounded-2xl border-t-4 border-nsYellow shadow-sm hover:shadow-xl transition-all duration-300 border-x border-b border-slate-200">
+        <div class="w-12 h-12 rounded-xl bg-amber-50 group-hover:bg-nsYellow text-amber-600 group-hover:text-nsBlack flex items-center justify-center text-xl mb-3 transition-colors">
+          <i class="fa-solid fa-file-contract"></i>
+        </div>
+        <h4 class="font-bold text-slate-900 text-sm sm:text-base group-hover:text-nsRed transition-colors">e-Tender & Sebut Harga</h4>
+        <p class="text-xs text-slate-500 mt-1 leading-relaxed">Iklan tawaran kerja pembinaan, mekanikal & elektrikal semasa.</p>
+      </a>
+
+      <!-- Kad 2 -->
+      <a href="#aduanSection" class="group bg-white p-5 rounded-2xl border-t-4 border-nsRed shadow-sm hover:shadow-xl transition-all duration-300 border-x border-b border-slate-200">
+        <div class="w-12 h-12 rounded-xl bg-red-50 group-hover:bg-nsRed text-nsRed group-hover:text-white flex items-center justify-center text-xl mb-3 transition-colors">
+          <i class="fa-solid fa-road-circle-exclamation"></i>
+        </div>
+        <h4 class="font-bold text-slate-900 text-sm sm:text-base group-hover:text-nsRed transition-colors">e-Aduan Jalan & Pothole</h4>
+        <p class="text-xs text-slate-500 mt-1 leading-relaxed">Sistem laporan kerosakan jalan awam dengan GPS masa nyata.</p>
+      </a>
+
+      <!-- Kad 3 -->
+      <a href="#direktoriDaerahSection" class="group bg-white p-5 rounded-2xl border-t-4 border-nsBlack shadow-sm hover:shadow-xl transition-all duration-300 border-x border-b border-slate-200">
+        <div class="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-nsBlack text-slate-800 group-hover:text-nsYellow flex items-center justify-center text-xl mb-3 transition-colors">
+          <i class="fa-solid fa-map-location-dot"></i>
+        </div>
+        <h4 class="font-bold text-slate-900 text-sm sm:text-base group-hover:text-nsRed transition-colors">Direktori 7 Daerah</h4>
+        <p class="text-xs text-slate-500 mt-1 leading-relaxed">Maklumat pejabat, talian am dan panduan arah Waze / Google Maps.</p>
+      </a>
+
+      <!-- Kad 4 -->
+      <div onclick="openModalInfo('Piagam Pelanggan JKR', 'Komitmen JKR NS: Membaiki pothole dalam tempoh 24 jam selepas aduan diterima. Meluluskan permohonan pelan utiliti dalam tempoh 14 hari bekerja.')" class="cursor-pointer group bg-white p-5 rounded-2xl border-t-4 border-emerald-500 shadow-sm hover:shadow-xl transition-all duration-300 border-x border-b border-slate-200">
+        <div class="w-12 h-12 rounded-xl bg-emerald-50 group-hover:bg-emerald-600 text-emerald-600 group-hover:text-white flex items-center justify-center text-xl mb-3 transition-colors">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <h4 class="font-bold text-slate-900 text-sm sm:text-base group-hover:text-nsRed transition-colors">Piagam Pelanggan</h4>
+        <p class="text-xs text-slate-500 mt-1 leading-relaxed">Standard ketelusan perkhidmatan dan tempoh masa tindak balas.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 5. NOTIS & AMARAN LALUAN ==================== -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div class="bg-gradient-to-r from-red-50 to-amber-50 border-l-4 border-nsRed p-4 rounded-xl shadow-sm flex items-start gap-3">
+      <div class="p-2 rounded-lg bg-nsRed text-white flex-shrink-0">
+        <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-black uppercase text-nsRed bg-red-100 px-2 py-0.5 rounded">Notis Laluan</span>
+          <span class="text-xs text-slate-500">2 November 2026</span>
+        </div>
+        <h4 class="font-bold text-slate-900 text-sm mt-1">Penutupan Laluan FT086 (Jalan Jelebu - Pantai KM 14-16)</h4>
+        <p class="text-xs text-slate-600 mt-0.5">Kerja penstabilan cerun dan tebatan banjir sedang aktif dijalankan. Pengguna disarankan menggunakan laluan alternatif melalui Bukit Tangga atau Lebuhraya LEKAS.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 6. KATEGORI PENGGUNA (TABS INTERAKTIF) ==================== -->
+  <section id="kategoriPengguna" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="text-center max-w-xl mx-auto mb-8">
+      <h3 class="text-2xl font-black text-slate-900 tracking-tight">Kategori Pengguna</h3>
+      <p class="text-xs sm:text-sm text-slate-600 mt-1">Pilih profil peranan anda untuk panduan dan capaian yang disesuaikan.</p>
+      
+      <!-- Tab Buttons -->
+      <div class="inline-flex p-1 bg-slate-200/80 rounded-xl mt-4 max-w-full overflow-x-auto">
+        <button onclick="switchCategoryTab('awam')" id="tabBtn-awam" class="category-tab-btn px-4 py-2 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-sm transition-all">Orang Awam</button>
+        <button onclick="switchCategoryTab('kontraktor')" id="tabBtn-kontraktor" class="category-tab-btn px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all">Kontraktor & Perunding</button>
+        <button onclick="switchCategoryTab('agensi')" id="tabBtn-agensi" class="category-tab-btn px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all">Agensi Kerajaan</button>
+      </div>
+    </div>
+
+    <!-- Kandungan Tab Awam -->
+    <div id="tabContent-awam" class="category-tab-content bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="space-y-2">
+          <div class="w-10 h-10 rounded-lg bg-red-100 text-nsRed flex items-center justify-center font-bold">
+            <i class="fa-solid fa-bullhorn"></i>
+          </div>
+          <h4 class="font-bold text-slate-900 text-base">Saluran Aduan Rasmi</h4>
+          <p class="text-xs text-slate-600 leading-relaxed">Gunakan borang e-Aduan digital untuk melaporkan jalan rosak, lampu isyarat padam, atau penghadang jalan yang rosak secara terus ke JKR daerah.</p>
+        </div>
+        <div class="space-y-2">
+          <div class="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-map-marked-alt"></i>
+          </div>
+          <h4 class="font-bold text-slate-900 text-base">Semakan Status Jalan Raya</h4>
+          <p class="text-xs text-slate-600 leading-relaxed">Ketahui laluan terputus atau kerja pembaikan cerun berjadual sebelum memulakan perjalanan merentasi daerah di Negeri Sembilan.</p>
+        </div>
+        <div class="space-y-2">
+          <div class="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <h4 class="font-bold text-slate-900 text-base">Keselamatan Trafik Zon Kerja</h4>
+          <p class="text-xs text-slate-600 leading-relaxed">Patuhi papan tanda amaran dan had laju di zon projek naik taraf bagi mengelakkan kemalangan tidak diingini.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kandungan Tab Kontraktor -->
+    <div id="tabContent-kontraktor" class="category-tab-content hidden bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="space-y-2">
+          <div class="w-10 h-10 rounded-lg bg-yellow-100 text-amber-800 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-gavel"></i>
+          </div>
+          <h4 class="font-bold text-slate-900 text-base">Pusat Tender Terbuka</h4>
+          <p class="text-xs text-slate-600 leading-relaxed">Muat turun kenyataan tender, jadual sebut harga, dan syarat kelayakan pendaftaran CIDB / PKK bagi kerja pembinaan awam.</p>
+        </div>
+        <div class="space-y-2">
+          <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-receipt"></i>
+          </div>
+          <h4 class="font-bold text-slate-900 text-base">Tuntutan Bayaran Interim</h4>
+          <p class="text-xs text-slate-600 leading-relaxed">JKR NS mematuhi piagam penyelesaian sijil bayaran kemajuan kerja kontraktor dalam tempoh 14 hari selepas permohonan lengkap.</p>
+        </div>
+        <div class="space-y-2">
+          <div class="w-10 h-10 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-scale-balanced"></i>
+          </div>
+          <h4 class="font-bold text-slate-900 text-base">Polisi Anti-Rasuah (ABMS)</h4>
+          <p class="text-xs text-slate-600 leading-relaxed">Semua urusan perolehan tertakluk kepada Sistem Pengurusan Anti-Rasuah ISO 37001 bagi menjamin integriti saksama.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kandungan Tab Agensi -->
+    <div id="tabContent-agensi" class="category-tab-content hidden bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="space-y-2">
+          <div class="w-10 h-10 rounded-lg bg-slate-100 text-slate-800 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-compass-drafting"></i>
+          </div>
+          <h4 class="font-bold text-slate-900 text-base">Perundingan Kejuruteraan</h4>
+          <p class="text-xs text-slate-600 leading-relaxed">Khidmat nasihat teknikal reka bentuk jalan, struktur bangunan awam, dan penyelenggaraan aset premis kerajaan negeri.</p>
+        </div>
+        <div class="space-y-2">
+          <div class="w-10 h-10 rounded-lg bg-cyan-100 text-cyan-800 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-helmet-safety"></i>
+          </div>
+          <h4 class="font-bold text-slate-900 text-base">Kelulusan Permit Korekan Jalan</h4>
+          <p class="text-xs text-slate-600 leading-relaxed">Permohonan laluan utiliti (air, elektrik, gentian optik) perlu melalui semakan teknikal JKR Daerah sebelum kerja bermula.</p>
+        </div>
+        <div class="space-y-2">
+          <div class="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-diagram-project"></i>
+          </div>
+          <h4 class="font-bold text-slate-900 text-base">Pemantauan Projek Negeri</h4>
+          <p class="text-xs text-slate-600 leading-relaxed">Penyelarasan laporan kemajuan fizikal bersama Unit Perancang Ekonomi Negeri (UPEN) Negeri Sembilan.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 7. MODUL TENDER & SEBUT HARGA BERPENAPIS ==================== -->
+  <section id="tenderSection" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+      <div>
+        <div class="inline-flex items-center gap-1.5 text-xs font-bold text-nsRed uppercase tracking-wider mb-1">
+          <span class="w-2 h-2 rounded-full bg-nsRed animate-ping"></span>
+          Perolehan & Kontrak
+        </div>
+        <h3 class="text-2xl font-black text-slate-900 tracking-tight">Kenyataan Tender & Sebut Harga Semasa</h3>
+        <p class="text-xs sm:text-sm text-slate-600">Semakan hebahan rasmi kerja pembinaan dan perbekalan JKR Negeri Sembilan.</p>
+      </div>
+
+      <!-- Penapis Status Tender -->
+      <div class="flex flex-wrap gap-2 text-xs font-bold">
+        <button onclick="filterTenders('semua')" id="btnTender-semua" class="tender-filter-btn px-3 py-1.5 rounded-lg bg-nsBlack text-white">Semua (4)</button>
+        <button onclick="filterTenders('buka')" id="btnTender-buka" class="tender-filter-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Dibuka (2)</button>
+        <button onclick="filterTenders('tutup')" id="btnTender-tutup" class="tender-filter-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Tutup (1)</button>
+        <button onclick="filterTenders('keputusan')" id="btnTender-keputusan" class="tender-filter-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Keputusan (1)</button>
+      </div>
+    </div>
+
+    <!-- Senarai Tender -->
+    <div class="space-y-3" id="tenderListContainer">
+      <!-- Tender 1 -->
+      <div class="tender-item tender-buka bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-nsYellow transition-all">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800">Sedang Dibuka</span>
+            <span class="text-xs font-mono text-slate-500">JKR/NS/JALAN/04/2026</span>
+          </div>
+          <h4 class="font-bold text-slate-900 text-sm sm:text-base">Kerja-kerja Memperelok dan Menurap Semula Laluan FT001 (Seremban - Rembau)</h4>
+          <p class="text-xs text-slate-500 flex items-center gap-3">
+            <span><i class="fa-solid fa-location-dot text-nsRed mr-1"></i>Daerah Rembau</span>
+            <span><i class="fa-solid fa-calendar mr-1"></i>Tarikh Tutup: 28 November 2026</span>
+            <span><i class="fa-solid fa-certificate mr-1 text-amber-500"></i>CIDB G4 / G5</span>
+          </p>
+        </div>
+        <button onclick="openModalInfo('Dokumen Tender', 'Kenyataan tender JKR/NS/JALAN/04/2026 boleh dimuat turun melalui portal e-Perolehan Kerajaan Negeri Sembilan.')" class="px-4 py-2 bg-slate-100 hover:bg-nsYellow hover:text-nsBlack text-slate-800 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-download"></i>
+          <span>Muat Turun Kenyataan</span>
+        </button>
+      </div>
+
+      <!-- Tender 2 -->
+      <div class="tender-item tender-buka bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-nsYellow transition-all">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800">Sedang Dibuka</span>
+            <span class="text-xs font-mono text-slate-500">JKR/NS/JAMB/09/2026</span>
+          </div>
+          <h4 class="font-bold text-slate-900 text-sm sm:text-base">Penyelenggaraan Struktur Jambatan Sungai Linggi di Laluan N12 (Port Dickson)</h4>
+          <p class="text-xs text-slate-500 flex items-center gap-3">
+            <span><i class="fa-solid fa-location-dot text-nsRed mr-1"></i>Daerah Port Dickson</span>
+            <span><i class="fa-solid fa-calendar mr-1"></i>Tarikh Tutup: 18 November 2026</span>
+            <span><i class="fa-solid fa-certificate mr-1 text-amber-500"></i>CIDB G3</span>
+          </p>
+        </div>
+        <button onclick="openModalInfo('Dokumen Tender', 'Kenyataan sebut harga JKR/NS/JAMB/09/2026 boleh dimuat turun melalui sistem e-Tender JKR.')" class="px-4 py-2 bg-slate-100 hover:bg-nsYellow hover:text-nsBlack text-slate-800 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-download"></i>
+          <span>Muat Turun Kenyataan</span>
+        </button>
+      </div>
+
+      <!-- Tender 3 -->
+      <div class="tender-item tender-tutup bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 opacity-75">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-200 text-slate-700">Telah Ditutup (Penilaian)</span>
+            <span class="text-xs font-mono text-slate-500">JKR/NS/BGN/01/2026</span>
+          </div>
+          <h4 class="font-bold text-slate-900 text-sm sm:text-base">Membina Dewan Serbaguna Berkonsep Minangkabau di Kuala Pilah</h4>
+          <p class="text-xs text-slate-500 flex items-center gap-3">
+            <span><i class="fa-solid fa-location-dot text-nsRed mr-1"></i>Kuala Pilah</span>
+            <span><i class="fa-solid fa-lock mr-1"></i>Tutup: 24 Oktober 2026</span>
+          </p>
+        </div>
+        <span class="text-xs font-semibold text-slate-400 italic">Peringkat Penilaian Teknikal</span>
+      </div>
+
+      <!-- Tender 4 -->
+      <div class="tender-item tender-keputusan bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 text-blue-800">Keputusan Rasmi</span>
+            <span class="text-xs font-mono text-slate-500">JKR/NS/ELK/02/2026</span>
+          </div>
+          <h4 class="font-bold text-slate-900 text-sm sm:text-base">Pemasangan Lampu Jalan Solar Pintar Sepanjang Laluan Persekutuan Jempol</h4>
+          <p class="text-xs text-slate-500 flex items-center gap-3">
+            <span><i class="fa-solid fa-trophy mr-1 text-nsYellow"></i>Pemenang: Wawasan Elektrik NS Sdn Bhd</span>
+            <span><i class="fa-solid fa-circle-check mr-1 text-emerald-600"></i>Disahkan</span>
+          </p>
+        </div>
+        <button onclick="openModalInfo('Keputusan Sebut Harga', 'Tawaran telah dianugerahkan kepada penender yang melepasi penilaian harga dan kepatuhan spesifikasi teknikal.')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition-colors">
+          Lihat Perincian
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 8. DIREKTORI 7 PEJABAT DAERAH JKR NS ==================== -->
+  <section id="direktoriDaerahSection" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="mb-6">
+      <h3 class="text-2xl font-black text-slate-900 tracking-tight">Direktori 7 Pejabat Daerah JKR Negeri Sembilan</h3>
+      <p class="text-xs sm:text-sm text-slate-600">Pilih daerah untuk melihat maklumat Jurutera Daerah (JDR) dan navigasi pantas.</p>
+    </div>
+
+    <!-- Pilihan Butang Daerah -->
+    <div class="flex flex-wrap gap-2 mb-6">
+      <button onclick="selectDistrict('seremban')" id="distBtn-seremban" class="district-btn px-4 py-2 rounded-xl text-xs font-bold bg-nsBlack text-white">Seremban</button>
+      <button onclick="selectDistrict('pd')" id="distBtn-pd" class="district-btn px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100">Port Dickson</button>
+      <button onclick="selectDistrict('rembau')" id="distBtn-rembau" class="district-btn px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100">Rembau</button>
+      <button onclick="selectDistrict('kualapilah')" id="distBtn-kualapilah" class="district-btn px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100">Kuala Pilah</button>
+      <button onclick="selectDistrict('jempol')" id="distBtn-jempol" class="district-btn px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100">Jempol</button>
+      <button onclick="selectDistrict('jelebu')" id="distBtn-jelebu" class="district-btn px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100">Jelebu</button>
+      <button onclick="selectDistrict('tampin')" id="distBtn-tampin" class="district-btn px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100">Tampin</button>
+    </div>
+
+    <!-- Kad Info Daerah Dipilih -->
+    <div id="districtDetailCard" class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-md">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+        <div class="md:col-span-8 space-y-3">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-nsYellow/20 text-amber-800 text-xs font-bold">
+            <i class="fa-solid fa-building-user"></i>
+            <span id="districtTag">Ibu Pejabat Daerah JKR Seremban</span>
+          </div>
+          <h4 id="districtTitle" class="text-xl sm:text-2xl font-black text-slate-900">Pejabat Jurutera Daerah Seremban</h4>
+          <p id="districtAddress" class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            Kompleks Kerja Raya, Jalan S2 A47, 70300 Seremban 2, Negeri Sembilan Darul Khusus.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs text-slate-700 font-medium">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-phone text-nsRed"></i>
+              <span id="districtPhone">06-765 9200</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-envelope text-nsRed"></i>
+              <span id="districtEmail">jkrseremban@jkr.gov.my</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="md:col-span-4 flex flex-col gap-2.5">
+          <a id="btnGoogleMaps" href="https://maps.google.com/?q=JKR+Seremban" target="_blank" class="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
+            <i class="fa-solid fa-map-location text-nsYellow"></i>
+            <span>Buka Google Maps</span>
+          </a>
+          <a id="btnWaze" href="https://waze.com/ul?q=JKR+Seremban" target="_blank" class="w-full py-2.5 px-4 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
+            <i class="fa-brands fa-waze text-white text-base"></i>
+            <span>Panduan Arah Waze</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 9. E-ADUAN PINTAR (GPS & SIMULASI TIKET) ==================== -->
+  <section id="aduanSection" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
+      <div class="p-6 sm:p-10 bg-gradient-to-r from-nsBlackPure via-slate-900 to-slate-800 text-white">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-nsRed/30 border border-nsRed/50 text-nsYellow text-xs font-bold uppercase tracking-wider mb-2">
+          <i class="fa-solid fa-location-crosshairs"></i>
+          Sistem Pengurusan Aduan Awam JKR
+        </div>
+        <h3 class="text-2xl sm:text-3xl font-black">Salurkan Aduan Jalan Raya & Infrastruktur</h3>
+        <p class="text-xs sm:text-sm text-slate-300 max-w-2xl mt-1 leading-relaxed">
+          Tindakan pantas 24 jam untuk kes potholes jalan persekutuan dan negeri. Sertakan koordinat lokasi GPS tepat dan gambar kerosakan untuk tindakan segera juruteknik daerah.
+        </p>
+      </div>
+
+      <form id="aduanForm" onsubmit="handleFormSubmit(event)" class="p-6 sm:p-10 space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+          <!-- Nama -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Penuh Pengadu *</label>
+            <input type="text" id="aduanNama" required placeholder="Contoh: Ahmad bin Razak" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-nsYellow">
+          </div>
+
+          <!-- Telefon -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">Nombor Telefon Bimbit *</label>
+            <input type="tel" id="aduanTelefon" required placeholder="012-3456789" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-nsYellow">
+          </div>
+
+          <!-- Daerah -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">Daerah Lokasi Kejadian *</label>
+            <select id="aduanDaerah" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-nsYellow">
+              <option value="Seremban">Seremban</option>
+              <option value="Port Dickson">Port Dickson</option>
+              <option value="Rembau">Rembau</option>
+              <option value="Kuala Pilah">Kuala Pilah</option>
+              <option value="Jempol">Jempol</option>
+              <option value="Jelebu">Jelebu</option>
+              <option value="Tampin">Tampin</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <!-- Jenis Kerosakan -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">Kategori Masalah / Kerosakan *</label>
+            <select id="aduanKategori" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-nsYellow">
+              <option value="Jalan Berlubang (Pothole)">Jalan Berlubang (Pothole) - Tindakan 24 Jam</option>
+              <option value="Lampu Isyarat Rosak / Padam">Lampu Isyarat Rosak / Padam</option>
+              <option value="Runtuhan Cerun / Tebing">Runtuhan Cerun / Tebing Jalan</option>
+              <option value="Papan Tanda Tumbang / Halangan">Papan Tanda Tumbang / Halangan Laluan</option>
+              <option value="Lain-lain Kerosakan">Lain-lain Kerosakan Struktur</option>
+            </select>
+          </div>
+
+          <!-- Butang Pengesanan GPS -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">Koordinat Lokasi GPS (Pilihan Pintar)</label>
+            <div class="flex gap-2">
+              <input type="text" id="gpsCoordinates" placeholder="Contoh: 2.6922° N, 101.9056° E" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-nsYellow">
+              <button type="button" onclick="detectUserLocation()" class="px-4 py-2.5 bg-nsYellow text-nsBlack hover:bg-yellow-400 font-bold rounded-xl text-xs flex items-center gap-1.5 whitespace-nowrap shadow-sm">
+                <i class="fa-solid fa-location-arrow"></i>
+                <span class="hidden sm:inline">Kesan GPS</span>
+              </button>
+            </div>
+            <span id="gpsStatus" class="text-[11px] text-slate-500 mt-1 block">Tekan butang untuk memasukkan lokasi telefon/komputer anda secara automatik.</span>
+          </div>
+        </div>
+
+        <!-- Butiran Lokasi -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">Keterangan Lokasi & Butiran Masalah *</label>
+          <textarea id="aduanKeterangan" rows="3" required placeholder="Contoh: Jalan berlubang berhampiran simpang keluar Hospital Tuanku Ja'afar menghala ke Senawang..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-nsYellow"></textarea>
+        </div>
+
+        <!-- Muat Naik Gambar -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">Lampiran Gambar Bukti Kerosakan</label>
+          <div class="flex items-center gap-3">
+            <input type="file" id="aduanGambar" accept="image/*" onchange="previewImageUpload(event)" class="text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-800 hover:file:bg-slate-200 cursor-pointer">
+            <div id="imagePreviewContainer" class="hidden">
+              <img id="imagePreview" src="" alt="Pratonton" class="h-10 w-10 object-cover rounded-lg border border-slate-300">
+            </div>
+          </div>
+        </div>
+
+        <!-- Butang Hantar -->
+        <div class="pt-2 flex flex-col sm:flex-row items-center gap-4">
+          <button type="submit" class="w-full sm:w-auto px-8 py-3 bg-nsRed hover:bg-nsRedDark text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-nsRed/20 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-paper-plane text-nsYellow"></i>
+            <span>Hantar Laporan Aduan</span>
+          </button>
+          <span class="text-xs text-slate-500 text-center sm:text-left">Semua maklumat aduan direkodkan dalam sistem pemantauan prestasi jabatan.</span>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ==================== 10. FOOTER LENGKAP ==================== -->
+  <footer class="bg-nsBlackPure text-slate-300 pt-16 pb-8 border-t-4 border-nsYellow">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8 pb-12 border-b border-slate-800">
+      
+      <!-- Kolum 1 -->
+      <div class="space-y-4">
+        <div class="flex items-center gap-2 bg-white/5 p-2 rounded-xl w-fit border border-white/10">
+          <img src="Jata_Negeri_Sembilan_2.png" alt="Jata Negeri Sembilan" class="h-10 w-auto">
+          <img src="jkr_2.jpg" alt="JKR Negeri Sembilan" class="h-10 w-auto">
+        </div>
+        <h4 class="text-white font-bold text-sm">Jabatan Kerja Raya Negeri Sembilan</h4>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Kompleks Kerja Raya, Jalan S2 A47,<br>
+          70300 Seremban 2, Negeri Sembilan Darul Khusus.
+        </p>
+        <p class="text-xs text-slate-400">
+          <span class="font-bold text-slate-300">Talian Am:</span> 06-765 9200<br>
+          <span class="font-bold text-slate-300">Faks:</span> 06-763 0835
+        </p>
+      </div>
+
+      <!-- Kolum 2 -->
+      <div class="space-y-3">
+        <h4 class="text-white font-bold text-sm tracking-wider uppercase text-nsYellow">Pautan Pantas</h4>
+        <ul class="text-xs space-y-2 text-slate-400">
+          <li><a href="#heroSlider" class="hover:text-nsYellow transition-colors">Laman Utama</a></li>
+          <li><a href="#tenderSection" class="hover:text-nsYellow transition-colors">Tender & Sebut Harga</a></li>
+          <li><a href="#direktoriDaerahSection" class="hover:text-nsYellow transition-colors">Direktori Jurutera Daerah</a></li>
+          <li><a href="#aduanSection" class="hover:text-nsYellow transition-colors">e-Aduan Pothole 24 Jam</a></li>
+          <li><a href="https://www.n9.gov.my" target="_blank" class="hover:text-nsYellow transition-colors">Portal Kerajaan Negeri Sembilan</a></li>
+        </ul>
+      </div>
+
+      <!-- Kolum 3 -->
+      <div class="space-y-3">
+        <h4 class="text-white font-bold text-sm tracking-wider uppercase text-nsYellow">Ketelusan & Dasar</h4>
+        <ul class="text-xs space-y-2 text-slate-400">
+          <li><button onclick="openModalInfo('Dasar Privasi', 'JKR Negeri Sembilan komited dalam melindungi privasi maklumat peribadi pengguna selaras dengan Akta Perlindungan Data Peribadi.')" class="hover:text-nsYellow text-left">Dasar Privasi</button></li>
+          <li><button onclick="openModalInfo('Dasar Keselamatan Siber', 'Keselamatan data portal ini diurus mengikut piawaian Agensi Keselamatan Siber Negara (NACSA).')" class="hover:text-nsYellow text-left">Dasar Keselamatan Siber (DKS)</button></li>
+          <li><button onclick="openModalInfo('Penafian Rasmi', 'Kerajaan Negeri Sembilan dan JKR tidak bertanggungjawab terhadap sebarang kerugian akibat penggunaan maklumat portal ini.')" class="hover:text-nsYellow text-left">Penafian Rasmi</button></li>
+          <li><button onclick="openModalInfo('Pensijilan ISO & ABMS', 'Pematuhan Standard MS ISO 9001:2015 dan Sistem Pengurusan Anti-Rasuah ISO 37001.')" class="hover:text-nsYellow text-left">ISO 9001 & ABMS 37001</button></li>
+        </ul>
+      </div>
+
+      <!-- Kolum 4 -->
+      <div class="space-y-3">
+        <h4 class="text-white font-bold text-sm tracking-wider uppercase text-nsYellow">Statistik & Akses</h4>
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2">
+          <div class="text-[11px] text-slate-400">Jumlah Lawatan Portal:</div>
+          <div id="visitCountDisplay" class="text-xl font-mono font-bold text-nsYellow">1,483,128</div>
+          <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800">
+            Tarikh Kemas Kini: <span class="text-slate-300 font-mono">02 November 2026</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Hak Cipta -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
+      <p>&copy; 2026 Jabatan Kerja Raya Negeri Sembilan. Hak Cipta Terpelihara.</p>
+      <p class="text-[11px]">Paparan terbaik menggunakan resolusi 1920x1080 pada pelayar moden.</p>
+    </div>
+  </footer>
+
+  <!-- ==================== MODAL MAKLUMAT UMUM (TANPA ALERT) ==================== -->
+  <div id="infoModal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 transform transition-all">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+        <h4 id="modalTitle" class="font-bold text-base text-slate-900">Maklumat</h4>
+        <button onclick="closeModalInfo()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <p id="modalContent" class="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6"></p>
+      <div class="flex justify-end">
+        <button onclick="closeModalInfo()" class="px-5 py-2 bg-nsBlack hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT INTERAKTIF ==================== -->
+  <script>
+    // 1. Logik Hero Carousel (Auto 6 Saat & Manual)
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.hero-slide');
+    const indicators = document.querySelectorAll('.slide-indicator');
+    let slideTimer = null;
+
+    function renderSlide(index) {
+      currentSlide = (index + slides.length) % slides.length;
+      slides.forEach((slide, i) => {
+        if (i === currentSlide) {
+          slide.classList.remove('opacity-0', 'z-0');
+          slide.classList.add('opacity-100', 'z-10');
+        } else {
+          slide.classList.remove('opacity-100', 'z-10');
+          slide.classList.add('opacity-0', 'z-0');
+        }
+      });
+
+      indicators.forEach((ind, i) => {
+        if (i === currentSlide) {
+          ind.classList.remove('bg-white/40', 'w-3');
+          ind.classList.add('bg-nsYellow', 'w-8');
+        } else {
+          ind.classList.remove('bg-nsYellow', 'w-8');
+          ind.classList.add('bg-white/40', 'w-3');
+        }
+      });
+    }
+
+    function nextSlide() {
+      renderSlide(currentSlide + 1);
+      restartSlideTimer();
+    }
+
+    function prevSlide() {
+      renderSlide(currentSlide - 1);
+      restartSlideTimer();
+    }
+
+    function goToSlide(index) {
+      renderSlide(index);
+      restartSlideTimer();
+    }
+
+    function restartSlideTimer() {
+      if (slideTimer) clearInterval(slideTimer);
+      slideTimer = setInterval(() => {
+        renderSlide(currentSlide + 1);
+      }, 6000);
+    }
+
+    // 2. Aksesibiliti: Saiz Fon, Kontras & Bahasa
+    function setFontSize(size) {
+      document.body.classList.remove('font-size-small', 'font-size-normal', 'font-size-large');
+      document.body.classList.add(`font-size-${size}`);
+      localStorage.setItem('jkr_ns_font_size', size);
+    }
+
+    function toggleContrast() {
+      document.body.classList.toggle('high-contrast');
+      const isHigh = document.body.classList.contains('high-contrast');
+      localStorage.setItem('jkr_ns_contrast', isHigh ? 'true' : 'false');
+    }
+
+    function toggleLanguage() {
+      const langEl = document.getElementById('langText');
+      if (langEl.innerText === 'BM') {
+        langEl.innerText = 'EN';
+        openModalInfo('Language Switched', 'The portal interface has been switched to English mode.');
+      } else {
+        langEl.innerText = 'BM';
+        openModalInfo('Bahasa Ditukar', 'Antara muka portal telah kembali ke Bahasa Melayu.');
+      }
+    }
+
+    // 3. Menu Mobile Toggle
+    function toggleMobileNav() {
+      const menu = document.getElementById('mobileNavMenu');
+      menu.classList.toggle('hidden');
+    }
+
+    // 4. Kategori Pengguna Tabs
+    function switchCategoryTab(tabKey) {
+      document.querySelectorAll('.category-tab-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-slate-900', 'shadow-sm');
+        btn.classList.add('text-slate-600');
+      });
+      document.querySelectorAll('.category-tab-content').forEach(c => c.classList.add('hidden'));
+
+      const activeBtn = document.getElementById(`tabBtn-${tabKey}`);
+      const activeContent = document.getElementById(`tabContent-${tabKey}`);
+
+      if (activeBtn && activeContent) {
+        activeBtn.classList.add('bg-white', 'text-slate-900', 'shadow-sm');
+        activeBtn.classList.remove('text-slate-600');
+        activeContent.classList.remove('hidden');
+      }
+    }
+
+    // 5. Penapis Tender & Sebut Harga
+    function filterTenders(status) {
+      document.querySelectorAll('.tender-filter-btn').forEach(btn => {
+        btn.classList.remove('bg-nsBlack', 'text-white');
+        btn.classList.add('bg-slate-100', 'text-slate-700');
+      });
+      const activeBtn = document.getElementById(`btnTender-${status}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-nsBlack', 'text-white');
+        activeBtn.classList.remove('bg-slate-100', 'text-slate-700');
+      }
+
+      const items = document.querySelectorAll('.tender-item');
+      items.forEach(item => {
+        if (status === 'semua') {
+          item.classList.remove('hidden');
+        } else if (item.classList.contains(`tender-${status}`)) {
+          item.classList.remove('hidden');
+        } else {
+          item.classList.add('hidden');
+        }
+      });
+    }
+
+    // 6. Data Direktori 7 Pejabat Daerah
+    const districtData = {
+      seremban: {
+        tag: 'Ibu Pejabat Daerah JKR Seremban',
+        title: 'Pejabat Jurutera Daerah Seremban',
+        address: 'Kompleks Kerja Raya, Jalan S2 A47, 70300 Seremban 2, Negeri Sembilan.',
+        phone: '06-765 9200',
+        email: 'jkrseremban@jkr.gov.my',
+        maps: 'https://maps.google.com/?q=JKR+Seremban',
+        waze: 'https://waze.com/ul?q=JKR+Seremban'
+      },
+      pd: {
+        tag: 'Pejabat Jurutera Daerah Port Dickson',
+        title: 'JKR Daerah Port Dickson',
+        address: 'KM 1, Jalan Seremban, 71000 Port Dickson, Negeri Sembilan.',
+        phone: '06-647 1322',
+        email: 'jkrpd@jkr.gov.my',
+        maps: 'https://maps.google.com/?q=JKR+Port+Dickson',
+        waze: 'https://waze.com/ul?q=JKR+Port+Dickson'
+      },
+      rembau: {
+        tag: 'Pejabat Jurutera Daerah Rembau',
+        title: 'JKR Daerah Rembau',
+        address: 'Jalan Dato Lela Maharaja, 71300 Rembau, Negeri Sembilan.',
+        phone: '06-685 1244',
+        email: 'jkrrembau@jkr.gov.my',
+        maps: 'https://maps.google.com/?q=JKR+Rembau',
+        waze: 'https://waze.com/ul?q=JKR+Rembau'
+      },
+      kualapilah: {
+        tag: 'Pejabat Jurutera Daerah Kuala Pilah',
+        title: 'JKR Daerah Kuala Pilah',
+        address: 'Jalan Tampin, 72000 Kuala Pilah, Negeri Sembilan.',
+        phone: '06-481 1033',
+        email: 'jkrpilah@jkr.gov.my',
+        maps: 'https://maps.google.com/?q=JKR+Kuala+Pilah',
+        waze: 'https://waze.com/ul?q=JKR+Kuala+Pilah'
+      },
+      jempol: {
+        tag: 'Pejabat Jurutera Daerah Jempol',
+        title: 'JKR Daerah Jempol',
+        address: 'Kompleks Pentadbiran Daerah, 72120 Bandar Seri Jempol, Negeri Sembilan.',
+        phone: '06-458 1200',
+        email: 'jkrjempol@jkr.gov.my',
+        maps: 'https://maps.google.com/?q=JKR+Jempol',
+        waze: 'https://waze.com/ul?q=JKR+Jempol'
+      },
+      jelebu: {
+        tag: 'Pejabat Jurutera Daerah Jelebu',
+        title: 'JKR Daerah Jelebu',
+        address: '71600 Kuala Klawang, Jelebu, Negeri Sembilan.',
+        phone: '06-613 6233',
+        email: 'jkrjelebu@jkr.gov.my',
+        maps: 'https://maps.google.com/?q=JKR+Jelebu',
+        waze: 'https://waze.com/ul?q=JKR+Jelebu'
+      },
+      tampin: {
+        tag: 'Pejabat Jurutera Daerah Tampin',
+        title: 'JKR Daerah Tampin',
+        address: 'Jalan Kolam Air, 73000 Tampin, Negeri Sembilan.',
+        phone: '06-441 1255',
+        email: 'jkrtampin@jkr.gov.my',
+        maps: 'https://maps.google.com/?q=JKR+Tampin',
+        waze: 'https://waze.com/ul?q=JKR+Tampin'
+      }
+    };
+
+    function selectDistrict(key) {
+      document.querySelectorAll('.district-btn').forEach(btn => {
+        btn.classList.remove('bg-nsBlack', 'text-white');
+        btn.classList.add('bg-white', 'text-slate-700', 'border', 'border-slate-200');
+      });
+
+      const activeBtn = document.getElementById(`distBtn-${key}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-nsBlack', 'text-white');
+        activeBtn.classList.remove('bg-white', 'text-slate-700', 'border', 'border-slate-200');
+      }
+
+      const data = districtData[key];
+      if (data) {
+        document.getElementById('districtTag').innerText = data.tag;
+        document.getElementById('districtTitle').innerText = data.title;
+        document.getElementById('districtAddress').innerText = data.address;
+        document.getElementById('districtPhone').innerText = data.phone;
+        document.getElementById('districtEmail').innerText = data.email;
+        document.getElementById('btnGoogleMaps').href = data.maps;
+        document.getElementById('btnWaze').href = data.waze;
+      }
+    }
+
+    // 7. Pengesanan Geolocation GPS
+    function detectUserLocation() {
+      const statusEl = document.getElementById('gpsStatus');
+      const inputEl = document.getElementById('gpsCoordinates');
+
+      if (!navigator.geolocation) {
+        statusEl.innerText = "Pelayar anda tidak menyokong fungsi pengesanan GPS.";
+        return;
+      }
+
+      statusEl.innerText = "Sedang mendapatkan koordinat lokasi GPS...";
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude.toFixed(5);
+          const lng = position.coords.longitude.toFixed(5);
+          inputEl.value = `${lat}° N, ${lng}° E`;
+          statusEl.innerText = `Lokasi dikesan: Lat ${lat}, Lng ${lng} (Akurasi: ±${Math.round(position.coords.accuracy)}m)`;
+        },
+        () => {
+          // Fallback lokasi pusat Seremban 2 jika kebenaran disekat
+          inputEl.value = "2.69225° N, 101.90562° E";
+          statusEl.innerText = "Lokasi default Seremban 2 dimasukkan (akses GPS pelayar disekat pengguna).";
+        }
+      );
+    }
+
+    // 8. Pratonton Gambar Aduan
+    function previewImageUpload(event) {
+      const file = event.target.files[0];
+      const previewContainer = document.getElementById('imagePreviewContainer');
+      const previewImg = document.getElementById('imagePreview');
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          previewImg.src = e.target.result;
+          previewContainer.classList.remove('hidden');
+        }
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // 9. Penyerahan Borang e-Aduan
+    function handleFormSubmit(event) {
+      event.preventDefault();
+      const nama = document.getElementById('aduanNama').value;
+      const kategori = document.getElementById('aduanKategori').value;
+      const daerah = document.getElementById('aduanDaerah').value;
+      const ticketId = 'JKRNS-' + new Date().getFullYear() + '-' + Math.floor(100000 + Math.random() * 900000);
+
+      const msg = `Terima kasih ${nama}. Laporan bagi "${kategori}" di daerah ${daerah} telah berjaya direkodkan dalam sistem tindakan JKR. Nombor rujukan tiket anda ialah ${ticketId}.`;
+      openModalInfo('Aduan Berjaya Didaftarkan', msg);
+
+      document.getElementById('aduanForm').reset();
+      document.getElementById('imagePreviewContainer').classList.add('hidden');
+      document.getElementById('gpsStatus').innerText = "Tekan butang untuk memasukkan lokasi telefon/komputer anda secara automatik.";
+    }
+
+    // 10. Carian Live Sederhana
+    function handleSearchFilter() {
+      const query = document.getElementById('liveSearchInput').value.toLowerCase().trim();
+      const tenders = document.querySelectorAll('.tender-item');
+
+      if (query.length > 2) {
+        tenders.forEach(t => {
+          const text = t.innerText.toLowerCase();
+          if (text.includes(query)) {
+            t.classList.remove('hidden');
+          } else {
+            t.classList.add('hidden');
+          }
+        });
+      } else {
+        filterTenders('semua');
+      }
+    }
+
+    function showQuickSearchResult() {
+      const query = document.getElementById('liveSearchInput').value.trim();
+      if (!query) {
+        openModalInfo('Carian Kosong', 'Sila taip kata kunci carian seperti "Tender", "Rembau", atau "Pothole".');
+        return;
+      }
+      openModalInfo('Keputusan Carian', `Sistem telah memadankan rekod berkaitan "${query}". Sila semak seksyen berkaitan di laman web.`);
+    }
+
+    // 11. Modal Pengendali
+    function openModalInfo(title, content) {
+      document.getElementById('modalTitle').innerText = title;
+      document.getElementById('modalContent').innerText = content;
+      document.getElementById('infoModal').classList.remove('hidden');
+    }
+
+    function closeModalInfo() {
+      document.getElementById('infoModal').classList.add('hidden');
+    }
+
+    // Inisialisasi
+    window.addEventListener('DOMContentLoaded', () => {
+      // Mulakan Slider
+      renderSlide(0);
+      restartSlideTimer();
+
+      // Kemas kini kaunter lawatan
+      let visits = parseInt(localStorage.getItem('jkr_ns_visits') || '1483128') + 1;
+      localStorage.setItem('jkr_ns_visits', visits);
+      const visitEl = document.getElementById('visitCountDisplay');
+      if (visitEl) visitEl.innerText = visits.toLocaleString();
+
+      // Tarikh Hari Ini
+      const dateEl = document.getElementById('currentDateDisplay');
+      if (dateEl) {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        dateEl.innerText = new Date().toLocaleDateString('ms-MY', options);
+      }
+
+      // Muat Semula Pilihan Kontras
+      if (localStorage.getItem('jkr_ns_contrast') === 'true') {
+        document.body.classList.add('high-contrast');
+      }
+
+      // Muat Semula Pilihan Saiz Fon
+      const savedFontSize = localStorage.getItem('jkr_ns_font_size');
+      if (savedFontSize) {
+        setFontSize(savedFontSize);
+      }
+    });
+  </script>
+</body>
+</html>

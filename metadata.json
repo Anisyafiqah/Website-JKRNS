@@ -1,0 +1,6 @@
+{
+  "name": "Portal Rasmi JKR Negeri Sembilan",
+  "description": "Portal Rasmi Jabatan Kerja Raya Negeri Sembilan Darul Khusus - Sistem Tender, e-Aduan Pothole 24 Jam & Direktori Pejabat Daerah.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
