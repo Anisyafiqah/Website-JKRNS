@@ -11,6 +11,11 @@ import {
 import { AdminLoginModal, AuthUser } from './components/AdminLoginModal';
 import { AdminPortal } from './components/AdminPortal';
 import { PenyelarasPortal, TenderRecord } from './components/PenyelarasPortal';
+import { ProfilKorporat } from './components/ProfilKorporat';
+import { BahagianCawangan } from './components/BahagianCawangan';
+import { EBencanaStatus } from './components/EBencanaStatus';
+import { PusatMuatTurun } from './components/PusatMuatTurun';
+import { SistemAplikasiStaf } from './components/SistemAplikasiStaf';
 
 interface TenderItem {
   id: string;
@@ -898,26 +903,30 @@ export default function App() {
             </div>
 
             {/* Menu Desktop */}
-            <nav className="hidden lg:flex items-center gap-5 font-semibold text-xs sm:text-sm text-slate-700">
+            <nav className="hidden lg:flex items-center gap-4 xl:gap-5 font-semibold text-xs sm:text-sm text-slate-700">
               <a href="#heroSlider" className="hover:text-[#DC2626] transition-colors py-1">
                 {lang === 'BM' ? 'Utama' : 'Home'}
               </a>
-              <a href="#aksesPantas" className="hover:text-[#DC2626] transition-colors py-1">
-                {lang === 'BM' ? 'Akses Pantas' : 'Quick Access'}
+              <a href="#profilKorporat" className="hover:text-[#DC2626] transition-colors py-1">
+                {lang === 'BM' ? 'Profil Korporat' : 'Corporate Profile'}
               </a>
-              <a href="#kategoriPengguna" className="hover:text-[#DC2626] transition-colors py-1">
-                {lang === 'BM' ? 'Kategori' : 'Categories'}
+              <a href="#bahagianCawangan" className="hover:text-[#DC2626] transition-colors py-1">
+                {lang === 'BM' ? 'Bahagian & Cawangan' : 'HQ Divisions'}
               </a>
-              <a href="#tenderSection" className="hover:text-[#DC2626] transition-colors py-1 flex items-center gap-1.5">
-                <span>{lang === 'BM' ? 'Tender' : 'Tenders'}</span>
+              <a href="#kontraktorSection" className="hover:text-[#DC2626] transition-colors py-1 flex items-center gap-1.5">
+                <span>{lang === 'BM' ? 'Kontraktor' : 'Contractors'}</span>
                 <span className="w-2 h-2 rounded-full bg-[#DC2626] animate-ping"></span>
               </a>
               <a href="#direktoriDaerahSection" className="hover:text-[#DC2626] transition-colors py-1">
                 {lang === 'BM' ? '7 Pejabat Daerah' : '7 District Offices'}
               </a>
+              <a href="#bencanaSection" className="hover:text-[#DC2626] transition-colors py-1 flex items-center gap-1">
+                <i className="fa-solid fa-cloud-bolt text-amber-500 text-xs"></i>
+                <span>{lang === 'BM' ? 'e-Bencana' : 'e-Disaster'}</span>
+              </a>
               <a
                 href="#aduanSection"
-                className="bg-[#DC2626] hover:bg-[#991B1B] text-white px-4 py-2 rounded-xl font-bold shadow-md shadow-red-600/20 transition-all flex items-center gap-2"
+                className="bg-[#DC2626] hover:bg-[#991B1B] text-white px-3.5 py-2 rounded-xl font-bold shadow-md shadow-red-600/20 transition-all flex items-center gap-1.5 text-xs"
               >
                 <i className="fa-solid fa-headset text-[#FFD100]"></i>
                 <span>e-Aduan</span>
@@ -968,25 +977,25 @@ export default function App() {
                 {lang === 'BM' ? 'Utama' : 'Home'}
               </a>
               <a
-                href="#aksesPantas"
+                href="#profilKorporat"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block py-2 px-3 rounded-lg hover:bg-slate-100 text-slate-800"
               >
-                {lang === 'BM' ? 'Akses Pantas' : 'Quick Access'}
+                {lang === 'BM' ? 'Profil Korporat' : 'Corporate Profile'}
               </a>
               <a
-                href="#kategoriPengguna"
+                href="#bahagianCawangan"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block py-2 px-3 rounded-lg hover:bg-slate-100 text-slate-800"
               >
-                {lang === 'BM' ? 'Kategori Pengguna' : 'User Categories'}
+                {lang === 'BM' ? 'Bahagian & Cawangan Ibu Pejabat' : 'HQ Divisions & Branches'}
               </a>
               <a
-                href="#tenderSection"
+                href="#kontraktorSection"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block py-2 px-3 rounded-lg hover:bg-slate-100 text-slate-800"
               >
-                {lang === 'BM' ? 'Tender & Sebut Harga' : 'Tenders & Quotations'}
+                {lang === 'BM' ? 'Kontraktor (Tender & Sebut Harga)' : 'Contractors (Tenders & Quotations)'}
               </a>
               <a
                 href="#direktoriDaerahSection"
@@ -994,6 +1003,27 @@ export default function App() {
                 className="block py-2 px-3 rounded-lg hover:bg-slate-100 text-slate-800"
               >
                 {lang === 'BM' ? '7 Pejabat Daerah' : '7 District Offices'}
+              </a>
+              <a
+                href="#bencanaSection"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block py-2 px-3 rounded-lg hover:bg-slate-100 text-slate-800"
+              >
+                {lang === 'BM' ? 'e-Bencana (Amaran Laluan)' : 'e-Disaster (Road Alerts)'}
+              </a>
+              <a
+                href="#muatTurunSection"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block py-2 px-3 rounded-lg hover:bg-slate-100 text-slate-800"
+              >
+                {lang === 'BM' ? 'Pusat Muat Turun Borang' : 'Download Forms'}
+              </a>
+              <a
+                href="#sistemStafSection"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block py-2 px-3 rounded-lg hover:bg-slate-100 text-slate-800"
+              >
+                {lang === 'BM' ? 'Sistem & Intranet Staf' : 'Staff Intranet'}
               </a>
               <a
                 href="#aduanSection"
@@ -1260,103 +1290,15 @@ export default function App() {
         </form>
       </section>
 
-      {/* ==================== 4. AKSES PANTAS (QUICK SERVICES) ==================== */}
-      <section id="aksesPantas" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8 w-full">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              {lang === 'BM' ? 'Perkhidmatan & Akses Pantas' : 'Services & Quick Access'}
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-600">
-              {lang === 'BM'
-                ? 'Pautan segera ke modul teknikal dan aplikasi rasmi kerajaan.'
-                : 'Direct links to official technical modules and government portals.'}
-            </p>
-          </div>
-          <div className="h-1 flex-1 mx-6 bg-slate-200 hidden md:block rounded"></div>
-        </div>
+      {/* ==================== 4. PROFIL KORPORAT JABATAN (MENGGANTIKAN AKSES PANTAS) ==================== */}
+      <ProfilKorporat lang={lang} onOpenModal={openModal} />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          {/* Card 1 */}
-          <a
-            href="#tenderSection"
-            className="group bg-white p-5 rounded-2xl border-t-4 border-[#FFD100] shadow-sm hover:shadow-xl transition-all duration-300 border-x border-b border-slate-200"
-          >
-            <div className="w-12 h-12 rounded-xl bg-amber-50 group-hover:bg-[#FFD100] text-amber-600 group-hover:text-black flex items-center justify-center text-xl mb-3 transition-colors">
-              <i className="fa-solid fa-file-contract"></i>
-            </div>
-            <h4 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-[#DC2626] transition-colors">
-              {lang === 'BM' ? 'e-Tender & Sebut Harga' : 'e-Tenders & Quotations'}
-            </h4>
-            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              {lang === 'BM'
-                ? 'Iklan tawaran kerja pembinaan, mekanikal & elektrikal semasa.'
-                : 'Current civil, mechanical & electrical engineering procurement notices.'}
-            </p>
-          </a>
-
-          {/* Card 2 */}
-          <a
-            href="#aduanSection"
-            className="group bg-white p-5 rounded-2xl border-t-4 border-[#DC2626] shadow-sm hover:shadow-xl transition-all duration-300 border-x border-b border-slate-200"
-          >
-            <div className="w-12 h-12 rounded-xl bg-red-50 group-hover:bg-[#DC2626] text-[#DC2626] group-hover:text-white flex items-center justify-center text-xl mb-3 transition-colors">
-              <i className="fa-solid fa-road-circle-exclamation"></i>
-            </div>
-            <h4 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-[#DC2626] transition-colors">
-              {lang === 'BM' ? 'e-Aduan Jalan & Pothole' : 'e-Complaint & Potholes'}
-            </h4>
-            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              {lang === 'BM'
-                ? 'Sistem laporan kerosakan jalan awam dengan GPS masa nyata.'
-                : 'Public road damage reporting platform integrated with live GPS coordinates.'}
-            </p>
-          </a>
-
-          {/* Card 3 */}
-          <a
-            href="#direktoriDaerahSection"
-            className="group bg-white p-5 rounded-2xl border-t-4 border-[#111827] shadow-sm hover:shadow-xl transition-all duration-300 border-x border-b border-slate-200"
-          >
-            <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-[#111827] text-slate-800 group-hover:text-[#FFD100] flex items-center justify-center text-xl mb-3 transition-colors">
-              <i className="fa-solid fa-map-location-dot"></i>
-            </div>
-            <h4 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-[#DC2626] transition-colors">
-              {lang === 'BM' ? 'Direktori 7 Daerah' : '7 District Directory'}
-            </h4>
-            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              {lang === 'BM'
-                ? 'Maklumat pejabat, talian am dan panduan arah Waze / Google Maps.'
-                : 'Office contacts, general lines, and direct Waze / Google Maps navigation.'}
-            </p>
-          </a>
-
-          {/* Card 4 */}
-          <div
-            onClick={() =>
-              openModal(
-                lang === 'BM' ? 'Piagam Pelanggan JKR Negeri Sembilan' : 'JKR Negeri Sembilan Citizen Charter',
-                lang === 'BM'
-                  ? 'Komitmen Piagam Pelanggan JKR NS:\n1. Membaiki pothole (jalan berlubang) dalam tempoh 24 jam selepas aduan sahih diterima.\n2. Meluluskan permohonan pelan laluan utiliti dalam tempoh 14 hari bekerja.\n3. Memperaku perakuan bayaran kemajuan kerja kontraktor dalam tempoh 14 hari selepas tuntutan lengkap diterima.\n4. Memastikan lampu isyarat yang dilaporkan rosak diambil tindakan interim dalam tempoh 6 jam.'
-                  : 'Customer Charter Commitments:\n1. Repair confirmed potholes within 24 hours of report receipt.\n2. Process utility right-of-way submissions within 14 working days.\n3. Issue interim payment certificates to contractors within 14 days of complete claims.\n4. Mobilize traffic light repair teams within 6 hours of reported fault.'
-              )
-            }
-            className="cursor-pointer group bg-white p-5 rounded-2xl border-t-4 border-emerald-500 shadow-sm hover:shadow-xl transition-all duration-300 border-x border-b border-slate-200"
-          >
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 group-hover:bg-emerald-600 text-emerald-600 group-hover:text-white flex items-center justify-center text-xl mb-3 transition-colors">
-              <i className="fa-solid fa-clock-rotate-left"></i>
-            </div>
-            <h4 className="font-bold text-slate-900 text-sm sm:text-base group-hover:text-[#DC2626] transition-colors">
-              {lang === 'BM' ? 'Piagam Pelanggan' : 'Customer Charter'}
-            </h4>
-            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              {lang === 'BM'
-                ? 'Standard ketelusan perkhidmatan dan tempoh masa tindak balas rasmi.'
-                : 'Official performance benchmarks and guaranteed response turnarounds.'}
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* ==================== 5. BAHAGIAN & CAWANGAN IBU PEJABAT (TERMASUK SUB-MODUL 7 DAERAH) ==================== */}
+      <BahagianCawangan
+        lang={lang}
+        onOpenModal={openModal}
+        onSelectDistrict={(distKey) => setSelectedDistrict(distKey)}
+      />
 
       {/* ==================== 5. NOTIS & AMARAN LALUAN ==================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 w-full">
@@ -1592,21 +1534,22 @@ export default function App() {
         )}
       </section>
 
-      {/* ==================== 7. MODUL TENDER & SEBUT HARGA BERPENAPIS ==================== */}
-      <section id="tenderSection" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+      {/* ==================== 7. MODUL KONTRAKTOR & PEROLEHAN (TENDER & SEBUT HARGA) ==================== */}
+      <section id="kontraktorSection" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full scroll-mt-20">
+        <span id="tenderSection" className="block -mt-20 pt-20"></span>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
           <div>
             <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#DC2626] uppercase tracking-wider mb-1">
               <span className="w-2 h-2 rounded-full bg-[#DC2626] animate-ping"></span>
-              {lang === 'BM' ? 'Perolehan & Kontrak' : 'Procurement & Contracts'}
+              {lang === 'BM' ? 'Modul Kontraktor & Perolehan Kerajaan' : 'Contractor & Government Procurement Module'}
             </div>
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight">
-              {lang === 'BM' ? 'Kenyataan Tender & Sebut Harga Semasa' : 'Current Tenders & Quotations'}
+            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              {lang === 'BM' ? 'Portal Kontraktor: Tender & Sebut Harga Semasa' : 'Contractor Portal: Current Tenders & Quotations'}
             </h3>
             <p className="text-xs sm:text-sm text-slate-600">
               {lang === 'BM'
-                ? 'Semakan hebahan rasmi kerja pembinaan dan perbekalan JKR Negeri Sembilan.'
-                : 'Official announcements for civil engineering, electrical, and maintenance contracts.'}
+                ? 'Semakan hebahan rasmi kerja pembinaan, mekanikal & elektrikal serta status keputusan tender JKR Negeri Sembilan.'
+                : 'Official announcements for civil engineering, electrical, and maintenance contracts in Negeri Sembilan.'}
             </p>
           </div>
 
@@ -1898,7 +1841,20 @@ export default function App() {
         </div>
       </section>
 
-      {/* ==================== 9. E-ADUAN PINTAR (BACKEND CLOUDFLARE + SIMULASI TIKET) ==================== */}
+      {/* ==================== 9. E-BENCANA & AMARAN LALUAN SEMASA (BiGBen) ==================== */}
+      <EBencanaStatus lang={lang} onOpenModal={openModal} />
+
+      {/* ==================== 10. PUSAT MUAT TURUN BORANG & PEKELILING ==================== */}
+      <PusatMuatTurun lang={lang} onOpenModal={openModal} />
+
+      {/* ==================== 11. SISTEM & INTRANET STAF JKR ==================== */}
+      <SistemAplikasiStaf
+        lang={lang}
+        onOpenModal={openModal}
+        onOpenAdminLogin={() => setShowAdminLoginModal(true)}
+      />
+
+      {/* ==================== 12. E-ADUAN PINTAR (BACKEND CLOUDFLARE + SIMULASI TIKET) ==================== */}
       <section id="aduanSection" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden">
           {/* Header Banner */}
@@ -2258,13 +2214,38 @@ export default function App() {
                 </a>
               </li>
               <li>
-                <a href="#tenderSection" className="hover:text-[#FFD100] transition-colors">
-                  {lang === 'BM' ? 'Tender & Sebut Harga' : 'Tenders & Bidding'}
+                <a href="#profilKorporat" className="hover:text-[#FFD100] transition-colors">
+                  {lang === 'BM' ? 'Profil Korporat' : 'Corporate Profile'}
+                </a>
+              </li>
+              <li>
+                <a href="#bahagianCawangan" className="hover:text-[#FFD100] transition-colors">
+                  {lang === 'BM' ? 'Bahagian & Cawangan Ibu Pejabat' : 'HQ Divisions & Branches'}
+                </a>
+              </li>
+              <li>
+                <a href="#kontraktorSection" className="hover:text-[#FFD100] transition-colors">
+                  {lang === 'BM' ? 'Kontraktor & Perolehan (Tender)' : 'Contractors & Tenders'}
                 </a>
               </li>
               <li>
                 <a href="#direktoriDaerahSection" className="hover:text-[#FFD100] transition-colors">
-                  {lang === 'BM' ? 'Direktori Jurutera Daerah' : 'District Engineers Directory'}
+                  {lang === 'BM' ? 'Direktori 7 Pejabat Daerah' : '7 District Offices Directory'}
+                </a>
+              </li>
+              <li>
+                <a href="#bencanaSection" className="hover:text-[#FFD100] transition-colors">
+                  {lang === 'BM' ? 'e-Bencana (BiGBen Laluan)' : 'e-Disaster (BiGBen)'}
+                </a>
+              </li>
+              <li>
+                <a href="#muatTurunSection" className="hover:text-[#FFD100] transition-colors">
+                  {lang === 'BM' ? 'Pusat Muat Turun Borang Rasmi' : 'Official Forms Download'}
+                </a>
+              </li>
+              <li>
+                <a href="#sistemStafSection" className="hover:text-[#FFD100] transition-colors">
+                  {lang === 'BM' ? 'Gerbang Intranet Staf JKR' : 'Staff Intranet Portals'}
                 </a>
               </li>
               <li>
