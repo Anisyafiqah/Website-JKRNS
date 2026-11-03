@@ -54,6 +54,7 @@ export const PenyelarasPortal: React.FC<PenyelarasPortalProps> = ({
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [formError, setFormError] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -75,10 +76,11 @@ export const PenyelarasPortal: React.FC<PenyelarasPortalProps> = ({
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.code || !formData.title || !formData.closingDate || !formData.cidb) {
-      alert('Sila lengkapkan semua medan mandatori yang bertanda (*).');
+      setFormError('Sila lengkapkan semua medan mandatori yang bertanda (*).');
       return;
     }
 
+    setFormError('');
     setIsSubmitting(true);
     try {
       const ok = await onRegisterTender({
@@ -104,7 +106,11 @@ export const PenyelarasPortal: React.FC<PenyelarasPortalProps> = ({
           siteVisit: 'Tidak Wajib / Tiada Lawatan Tapak',
           description: ''
         });
+      } else {
+        setFormError('Gagal menghantar iklan tender. Sila semak sambungan rangkaian atau data anda.');
       }
+    } catch (err: any) {
+      setFormError('Ralat berlaku semasa menghantar iklan tender.');
     } finally {
       setIsSubmitting(false);
     }
@@ -323,6 +329,12 @@ export const PenyelarasPortal: React.FC<PenyelarasPortalProps> = ({
             </div>
 
             <form onSubmit={handleFormSubmit} className="p-6 sm:p-8 space-y-5">
+              {formError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-xl text-xs flex items-center gap-2 animate-shake">
+                  <i className="fa-solid fa-triangle-exclamation flex-shrink-0"></i>
+                  <span>{formError}</span>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">

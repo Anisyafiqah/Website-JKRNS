@@ -604,6 +604,91 @@ async function startServer() {
     }
   });
 
+  // POST /api/auth/register - Register new staff / admin / penyelaras account
+  app.post('/api/auth/register', async (req: Request, res: Response) => {
+    try {
+      const rawUsername = req.body.username || req.body.namaPengguna;
+      const rawPassword = req.body.password || req.body.kataLaluan;
+      const rawName = req.body.name || req.body.nama || req.body.namaPenuh;
+      const rawRole = req.body.role || req.body.peranan || 'Penyelaras Iklan';
+      const rawEmail = req.body.email || req.body.emel;
+      const rawDept = req.body.department || req.body.jabatan || req.body.bahagian;
+
+      if (!rawUsername || !rawPassword || !rawName) {
+        return res.status(400).json({
+          success: false,
+          error: 'Sila lengkapkan Nama Penuh, Nama Pengguna (Username) dan Kata Laluan.'
+        });
+      }
+
+      const cleanUsername = String(rawUsername).trim().toLowerCase();
+      const cleanPassword = String(rawPassword).trim();
+      const cleanName = String(rawName).trim();
+
+      if (cleanUsername.length < 3) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nama pengguna mestilah sekurang-kurangnya 3 aksara.'
+        });
+      }
+
+      if (cleanPassword.length < 3) {
+        return res.status(400).json({
+          success: false,
+          error: 'Kata laluan mestilah sekurang-kurangnya 3 aksara.'
+        });
+      }
+
+      const targetRole: 'Admin' | 'Penyelaras Iklan' =
+        rawRole === 'Admin' || String(rawRole).toLowerCase().includes('admin')
+          ? 'Admin'
+          : 'Penyelaras Iklan';
+
+      const users = await ensureUsersStore();
+      const exists = users.find((u) => u.username.toLowerCase() === cleanUsername);
+      if (exists) {
+        return res.status(400).json({
+          success: false,
+          error: `Nama pengguna "${cleanUsername}" telah wujud dalam sistem. Sila pilih nama pengguna lain.`
+        });
+      }
+
+      const defaultDept =
+        targetRole === 'Admin'
+          ? 'Bahagian Pentadbiran & Integriti JKR NS'
+          : 'Unit Perolehan & Kontrak JKR NS';
+
+      const newUser: UserRecord = {
+        id: `user-${Date.now()}`,
+        username: cleanUsername,
+        password: cleanPassword,
+        name: cleanName,
+        role: targetRole,
+        email: rawEmail ? String(rawEmail).trim() : `${cleanUsername}@jkr.gov.my`,
+        department: rawDept ? String(rawDept).trim() : defaultDept,
+        status: 'Aktif',
+        createdAt: new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })
+      };
+
+      users.push(newUser);
+      await writeUsersStore(users);
+
+      const token = `jkr-ns-token-${newUser.role.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+      const { password: _, ...sanitized } = newUser;
+
+      res.status(201).json({
+        success: true,
+        message: `Pendaftaran berjaya! Akaun "${newUser.name}" telah didaftarkan sebagai ${newUser.role}.`,
+        token,
+        user: sanitized,
+        data: sanitized
+      });
+    } catch (err: any) {
+      console.error('[Registration Error]', err);
+      res.status(500).json({ success: false, error: err?.message || 'Ralat semasa mendaftar akaun baharu.' });
+    }
+  });
+
   // Backward compatible route: POST /api/admin/login
   app.post('/api/admin/login', async (req: Request, res: Response) => {
     const { username, password, role } = req.body;
@@ -652,32 +737,50 @@ async function startServer() {
   // POST /api/users - Create new user (Admin / Penyelaras Iklan)
   app.post('/api/users', async (req: Request, res: Response) => {
     try {
-      const { username, password, name, role, email, department } = req.body;
+      const rawUsername = req.body.username || req.body.namaPengguna;
+      const rawPassword = req.body.password || req.body.kataLaluan;
+      const rawName = req.body.name || req.body.nama || req.body.namaPenuh;
+      const rawRole = req.body.role || req.body.peranan || 'Penyelaras Iklan';
+      const rawEmail = req.body.email || req.body.emel;
+      const rawDept = req.body.department || req.body.jabatan || req.body.bahagian;
 
-      if (!username || !password || !name || !role) {
+      if (!rawUsername || !rawPassword || !rawName) {
         return res.status(400).json({
           success: false,
-          error: 'Nama, username, kata laluan dan peranan (role) mesti diisi.'
+          error: 'Nama Penuh, Nama Pengguna (Username), dan Kata Laluan mesti diisi.'
         });
       }
 
+      const cleanUsername = String(rawUsername).trim().toLowerCase();
+      const cleanPassword = String(rawPassword).trim();
+      const cleanName = String(rawName).trim();
+      const targetRole: 'Admin' | 'Penyelaras Iklan' =
+        rawRole === 'Admin' || String(rawRole).toLowerCase().includes('admin')
+          ? 'Admin'
+          : 'Penyelaras Iklan';
+
       const users = await ensureUsersStore();
-      const exists = users.find((u) => u.username.toLowerCase() === String(username).toLowerCase().trim());
+      const exists = users.find((u) => u.username.toLowerCase() === cleanUsername);
       if (exists) {
         return res.status(400).json({
           success: false,
-          error: `Nama pengguna "${username}" telah digunakan.`
+          error: `Nama pengguna "${cleanUsername}" telah digunakan. Sila pilih nama pengguna lain.`
         });
       }
 
+      const defaultDept =
+        targetRole === 'Admin'
+          ? 'Bahagian Pentadbiran & Integriti JKR NS'
+          : 'Unit Perolehan & Kontrak JKR NS';
+
       const newUser: UserRecord = {
         id: `user-${Date.now()}`,
-        username: String(username).trim().toLowerCase(),
-        password: String(password).trim(),
-        name: String(name).trim(),
-        role: role === 'Admin' ? 'Admin' : 'Penyelaras Iklan',
-        email: email ? String(email).trim() : `${username}@jkr.gov.my`,
-        department: department ? String(department).trim() : 'Jabatan Kerja Raya Negeri Sembilan',
+        username: cleanUsername,
+        password: cleanPassword,
+        name: cleanName,
+        role: targetRole,
+        email: rawEmail ? String(rawEmail).trim() : `${cleanUsername}@jkr.gov.my`,
+        department: rawDept ? String(rawDept).trim() : defaultDept,
         status: 'Aktif',
         createdAt: new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })
       };
@@ -688,8 +791,9 @@ async function startServer() {
       const { password: _, ...sanitized } = newUser;
       res.status(201).json({
         success: true,
-        message: `Pengguna baharu "${newUser.name}" dengan peranan "${newUser.role}" telah didaftarkan.`,
-        data: sanitized
+        message: `Pengguna baharu "${newUser.name}" dengan peranan "${newUser.role}" telah berjaya didaftarkan.`,
+        data: sanitized,
+        user: sanitized
       });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err?.message });
@@ -916,14 +1020,28 @@ async function startServer() {
   // GET /api/aduan - List all complaints
   app.get('/api/aduan', async (req: Request, res: Response) => {
     try {
+      const localRecords = await ensureDataStore();
       const cfRecords = await fetchFromCloudflare();
-      if (cfRecords && cfRecords.length > 0) {
-        return res.json({ success: true, source: 'cloudflare', data: cfRecords });
+
+      let combined: AduanRecord[] = [...localRecords];
+
+      if (cfRecords && Array.isArray(cfRecords) && cfRecords.length > 0) {
+        // Merge cloudflare records that aren't already present locally
+        const existingIds = new Set(localRecords.map((r) => r.id));
+        for (const cfItem of cfRecords) {
+          if (!existingIds.has(cfItem.id)) {
+            combined.push(cfItem);
+          }
+        }
       }
 
-      const localRecords = await ensureDataStore();
-      res.json({ success: true, source: 'local', data: localRecords });
+      res.json({
+        success: true,
+        source: cfRecords && cfRecords.length > 0 ? 'hybrid_cloudflare_local' : 'local',
+        data: combined
+      });
     } catch (err: any) {
+      console.error('[GET /api/aduan Error]', err);
       res.status(500).json({ success: false, error: err?.message });
     }
   });
@@ -945,15 +1063,22 @@ async function startServer() {
     }
   });
 
-  // POST /api/aduan - Create new complaint and store into Cloudflare
+  // POST /api/aduan - Create new complaint and store into Cloudflare + Local Store
   app.post('/api/aduan', async (req: Request, res: Response) => {
     try {
-      const { name, phone, district, category, gps, description, image } = req.body;
+      // Support both English and Bahasa Melayu field keys seamlessly
+      const rawName = req.body.name || req.body.nama || req.body.namaPenuh;
+      const rawPhone = req.body.phone || req.body.telefon || req.body.noTelefon;
+      const rawDistrict = req.body.district || req.body.daerah || 'Seremban';
+      const rawCategory = req.body.category || req.body.kategori || 'Jalan Berlubang (Pothole)';
+      const rawGps = req.body.gps || req.body.koordinat || '2.6922° N, 101.9056° E';
+      const rawDescription = req.body.description || req.body.keterangan || req.body.aduan || '';
+      const rawImage = req.body.image || req.body.gambar || req.body.foto;
 
-      if (!name || !phone || !district || !category || !description) {
+      if (!rawName || !rawPhone || !rawDescription) {
         return res.status(400).json({
           success: false,
-          error: 'Semua medan mandatori (nama, phone, district, category, description) mesti diisi.'
+          error: 'Sila lengkapkan Nama Penuh, Nombor Telefon, dan Keterangan Aduan (*).'
         });
       }
 
@@ -971,13 +1096,13 @@ async function startServer() {
 
       const newRecord: AduanRecord = {
         id: ticketId,
-        name: String(name).trim(),
-        phone: String(phone).trim(),
-        district: String(district).trim(),
-        category: String(category).trim(),
-        gps: String(gps || '2.6922° N, 101.9056° E').trim(),
-        description: String(description).trim(),
-        image: image || undefined,
+        name: String(rawName).trim(),
+        phone: String(rawPhone).trim(),
+        district: String(rawDistrict).trim(),
+        category: String(rawCategory).trim(),
+        gps: String(rawGps).trim(),
+        description: String(rawDescription).trim(),
+        image: rawImage || undefined,
         timestamp,
         status: 'Diterima'
       };
@@ -997,6 +1122,7 @@ async function startServer() {
         message: 'Aduan berjaya didaftarkan ke sistem JKR NS.',
         ticketId: newRecord.id,
         record: newRecord,
+        data: newRecord,
         cloudflare: {
           synced: cfResult.success,
           provider: cfResult.provider,

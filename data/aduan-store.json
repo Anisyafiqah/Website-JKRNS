@@ -1,5 +1,31 @@
 [
   {
+    "id": "JKRNS-2026-450513",
+    "name": "Puan Siti Nurhaliza",
+    "phone": "013-9876543",
+    "district": "Rembau",
+    "category": "Lampu Isyarat Rosak / Padam",
+    "gps": "2.6922° N, 101.9056° E",
+    "description": "Lampu isyarat di simpang Pekan Rembau padam sejak semalam.",
+    "timestamp": "03 Nov 2026, 01:14 PG",
+    "status": "Diterima",
+    "storedInCloudflare": false,
+    "cloudflareProvider": "Local Secured Vault (Pending Cloudflare Connection)"
+  },
+  {
+    "id": "JKRNS-2026-230904",
+    "name": "Ali",
+    "phone": "0123456789",
+    "district": "Seremban",
+    "category": "Jalan Berlubang",
+    "gps": "2.6922° N, 101.9056° E",
+    "description": "Test",
+    "timestamp": "03 Nov 2026, 01:09 PG",
+    "status": "Diterima",
+    "storedInCloudflare": false,
+    "cloudflareProvider": "Local Secured Vault (Pending Cloudflare Connection)"
+  },
+  {
     "id": "JKRNS-2026-951028",
     "name": "Ahmad bin Razak",
     "phone": "012-3456789",

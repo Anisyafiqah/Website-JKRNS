@@ -550,6 +550,11 @@ export default function App() {
 
         openModal(lang === 'BM' ? 'Aduan Berjaya Didaftarkan' : 'Complaint Successfully Filed', msg);
 
+        // Optimistically add to submittedComplaints state
+        if (result.record) {
+          setSubmittedComplaints((prev) => [result.record, ...prev.filter((c) => c.id !== result.record.id)]);
+        }
+
         // Reset Form
         setFormData({
           nama: '',

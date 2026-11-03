@@ -45,7 +45,7 @@ interface AdminPortalProps {
 }
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({
-  complaints,
+  complaints: propComplaints,
   cloudflareInfo,
   onClose,
   onLogout,
@@ -56,13 +56,29 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   // Navigation Tabs: 'aduan' | 'tender_review' | 'user_roles'
   const [activeTab, setActiveTab] = useState<'aduan' | 'tender_review' | 'user_roles'>('aduan');
 
-  // --- 1. Aduan States ---
+  // --- 1. Aduan States & Local Sync ---
+  const [complaintsList, setComplaintsList] = useState<ComplaintRecord[]>(propComplaints || []);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('Semua');
   const [districtFilter, setDistrictFilter] = useState<string>('Semua');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string>('');
+  const [actionErrorMsg, setActionErrorMsg] = useState<string>('');
+
+  // Manual Aduan Modal (for Admin to input complaints directly)
+  const [showManualAduanModal, setShowManualAduanModal] = useState(false);
+  const [isSubmittingAduan, setIsSubmittingAduan] = useState(false);
+  const [manualAduanError, setManualAduanError] = useState('');
+  const [manualAduanForm, setManualAduanForm] = useState({
+    nama: '',
+    telefon: '',
+    daerah: 'Seremban',
+    kategori: 'Jalan Berlubang (Pothole) - Tindakan 24 Jam',
+    gps: '2.6922° N, 101.9056° E',
+    keterangan: '',
+    gambar: ''
+  });
 
   // --- 2. Tender Review States ---
   const [tenders, setTenders] = useState<TenderRecord[]>([]);
@@ -71,12 +87,14 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [selectedTenderReview, setSelectedTenderReview] = useState<TenderRecord | null>(null);
   const [reviewRemarksInput, setReviewRemarksInput] = useState('');
   const [winnerInput, setWinnerInput] = useState('');
+  const [tenderReviewError, setTenderReviewError] = useState('');
   const [isProcessingTender, setIsProcessingTender] = useState(false);
 
   // --- 3. User & Role Management States ---
   const [usersList, setUsersList] = useState<UserItem[]>([]);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+  const [userModalError, setUserModalError] = useState('');
+  const [isSubmittingUser, setIsSubmittingUser] = useState(false);
   const [userFormData, setUserFormData] = useState({
     username: '',
     password: '',
@@ -86,14 +104,49 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     department: 'Unit Perolehan & Kontrak JKR NS'
   });
 
-  // Load tenders and users from backend
-  const fetchTendersAndUsers = async () => {
+  // --- 4. Custom In-UI Confirm Modal (Eliminating window.confirm) ---
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    confirmColor?: string;
+    onConfirm: () => Promise<void> | void;
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    confirmText: 'Sahkan',
+    confirmColor: 'bg-red-600',
+    onConfirm: () => {}
+  });
+
+  // Sync when propComplaints updates
+  useEffect(() => {
+    if (Array.isArray(propComplaints) && propComplaints.length > 0) {
+      setComplaintsList((prev) => {
+        // Merge without losing any local state
+        const existingMap = new Map(prev.map((c) => [c.id, c]));
+        for (const item of propComplaints) {
+          existingMap.set(item.id, item);
+        }
+        return Array.from(existingMap.values());
+      });
+    }
+  }, [propComplaints]);
+
+  // Load all data from backend (aduan, tenders, users)
+  const fetchAllAdminData = async () => {
     try {
-      const [tendersRes, usersRes] = await Promise.all([
+      const [aduanRes, tendersRes, usersRes] = await Promise.all([
+        fetch('/api/aduan').then((r) => r.json()).catch(() => null),
         fetch('/api/tenders?all=true').then((r) => r.json()).catch(() => null),
         fetch('/api/users').then((r) => r.json()).catch(() => null)
       ]);
 
+      if (aduanRes && aduanRes.success && Array.isArray(aduanRes.data)) {
+        setComplaintsList(aduanRes.data);
+      }
       if (tendersRes && tendersRes.success && Array.isArray(tendersRes.data)) {
         setTenders(tendersRes.data);
       }
@@ -106,34 +159,41 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   };
 
   useEffect(() => {
-    fetchTendersAndUsers();
+    fetchAllAdminData();
   }, []);
 
   // Aduan Metrics
-  const totalCount = complaints.length;
-  const diterimaCount = complaints.filter((c) => c.status === 'Diterima').length;
-  const siasatanCount = complaints.filter((c) => c.status === 'Dalam Siasatan').length;
-  const pembaikanCount = complaints.filter((c) => c.status === 'Tindakan Pembaikan').length;
-  const selesaiCount = complaints.filter((c) => c.status === 'Selesai').length;
+  const totalCount = complaintsList.length;
+  const diterimaCount = complaintsList.filter((c) => (c.status || '').toLowerCase().includes('terima')).length;
+  const siasatanCount = complaintsList.filter((c) => (c.status || '').toLowerCase().includes('siasat')).length;
+  const pembaikanCount = complaintsList.filter((c) => (c.status || '').toLowerCase().includes('baik')).length;
+  const selesaiCount = complaintsList.filter((c) => (c.status || '').toLowerCase().includes('selesai')).length;
 
   // Tender Metrics
   const pendingTendersCount = tenders.filter((t) => t.status === 'menunggu_kelulusan').length;
   const openTendersCount = tenders.filter((t) => t.status === 'buka').length;
 
-  // Aduan Filter
-  const filteredComplaints = complaints.filter((item) => {
-    if (statusFilter !== 'Semua' && item.status !== statusFilter) return false;
-    if (districtFilter !== 'Semua' && item.district.toLowerCase() !== districtFilter.toLowerCase())
-      return false;
+  // Aduan Filter (Lenient and safe for all field values)
+  const filteredComplaints = complaintsList.filter((item) => {
+    if (statusFilter !== 'Semua') {
+      const s = (item.status || '').toLowerCase().trim();
+      const target = statusFilter.toLowerCase().trim();
+      if (s !== target && !s.includes(target)) return false;
+    }
+    if (districtFilter !== 'Semua') {
+      const d = (item.district || '').toLowerCase().trim();
+      const target = districtFilter.toLowerCase().trim();
+      if (d !== target && !d.includes(target) && !target.includes(d)) return false;
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       const match =
-        item.id.toLowerCase().includes(q) ||
-        item.name.toLowerCase().includes(q) ||
-        item.phone.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q) ||
-        item.district.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q);
+        (item.id || '').toLowerCase().includes(q) ||
+        (item.name || '').toLowerCase().includes(q) ||
+        (item.phone || '').toLowerCase().includes(q) ||
+        (item.category || '').toLowerCase().includes(q) ||
+        (item.district || '').toLowerCase().includes(q) ||
+        (item.description || '').toLowerCase().includes(q);
       if (!match) return false;
     }
     return true;
@@ -148,63 +208,139 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         t.code.toLowerCase().includes(q) ||
         t.title.toLowerCase().includes(q) ||
         t.district.toLowerCase().includes(q) ||
-        t.cidb.toLowerCase().includes(q);
+        t.cidb.toLowerCase().includes(q) ||
+        (t.createdBy && t.createdBy.toLowerCase().includes(q));
       if (!match) return false;
     }
     return true;
   });
 
-  // Complaint Handlers
+  // --- ADUAN HANDLERS ---
   const handleStatusChange = async (id: string, newStatus: string) => {
     setUpdatingId(id);
+    setActionErrorMsg('');
     try {
+      // Optimistic update locally
+      setComplaintsList((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, status: newStatus as any } : c))
+      );
       await onUpdateStatus(id, newStatus);
       setActionSuccessMsg(`Status tiket ${id} telah berjaya dikemaskini kepada "${newStatus}".`);
       setTimeout(() => setActionSuccessMsg(''), 4000);
+      await fetchAllAdminData();
+    } catch (err: any) {
+      setActionErrorMsg(`Gagal mengemaskini status: ${err?.message || 'Ralat sambungan.'}`);
     } finally {
       setUpdatingId(null);
     }
   };
 
-  const handleDeleteComplaintLocal = async (id: string) => {
-    if (window.confirm(`Adakah anda pasti ingin memadamkan aduan ${id}?`)) {
-      await onDeleteComplaint(id);
-      setActionSuccessMsg(`Aduan ${id} telah dipadamkan.`);
-      setTimeout(() => setActionSuccessMsg(''), 4000);
+  const confirmDeleteComplaint = (id: string) => {
+    setConfirmModal({
+      open: true,
+      title: 'Padam Rekod Aduan',
+      message: `Adakah anda pasti ingin memadamkan tiket aduan "${id}" daripada pangkalan data? Tindakan ini tidak boleh dibatalkan.`,
+      confirmText: 'Padam Aduan',
+      confirmColor: 'bg-red-600',
+      onConfirm: async () => {
+        try {
+          setComplaintsList((prev) => prev.filter((c) => c.id !== id));
+          await onDeleteComplaint(id);
+          setActionSuccessMsg(`Aduan ${id} telah berjaya dipadamkan.`);
+          setTimeout(() => setActionSuccessMsg(''), 4000);
+          await fetchAllAdminData();
+        } catch (err: any) {
+          setActionErrorMsg('Gagal memadamkan rekod aduan.');
+        } finally {
+          setConfirmModal((prev) => ({ ...prev, open: false }));
+        }
+      }
+    });
+  };
+
+  // Submit manual aduan from Admin Portal
+  const handleManualAduanSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualAduanForm.nama.trim() || !manualAduanForm.telefon.trim() || !manualAduanForm.keterangan.trim()) {
+      setManualAduanError('Sila lengkapkan semua medan mandatori bertanda (*).');
+      return;
+    }
+
+    setIsSubmittingAduan(true);
+    setManualAduanError('');
+
+    try {
+      const response = await fetch('/api/aduan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: manualAduanForm.nama.trim(),
+          phone: manualAduanForm.telefon.trim(),
+          district: manualAduanForm.daerah,
+          category: manualAduanForm.kategori,
+          gps: manualAduanForm.gps || '2.6922° N, 101.9056° E',
+          description: manualAduanForm.keterangan.trim(),
+          image: manualAduanForm.gambar || undefined
+        })
+      });
+
+      const resJson = await response.json();
+      if (response.ok && resJson.success) {
+        setActionSuccessMsg(`Aduan baharu (${resJson.ticketId}) telah berjaya didaftarkan ke sistem.`);
+        setTimeout(() => setActionSuccessMsg(''), 5000);
+        setShowManualAduanModal(false);
+        setManualAduanForm({
+          nama: '',
+          telefon: '',
+          daerah: 'Seremban',
+          kategori: 'Jalan Berlubang (Pothole) - Tindakan 24 Jam',
+          gps: '2.6922° N, 101.9056° E',
+          keterangan: '',
+          gambar: ''
+        });
+        await fetchAllAdminData();
+        await onRefresh();
+      } else {
+        setManualAduanError(resJson.error || 'Gagal mendaftar aduan.');
+      }
+    } catch (err: any) {
+      setManualAduanError('Ralat rangkaian semasa mendaftar aduan.');
+    } finally {
+      setIsSubmittingAduan(false);
     }
   };
 
-  // --- TENDER REVIEW HANDLER (Luluskan / Ubah Status / Tolak) ---
-  const handleReviewTenderStatus = async (
-    tenderId: string,
-    newStatus: 'buka' | 'tutup' | 'keputusan' | 'ditolak' | 'menunggu_kelulusan'
-  ) => {
+  // --- TENDER REVIEW HANDLERS ---
+  const handleTenderReviewAction = async (newStatus: 'buka' | 'ditolak' | 'tutup' | 'keputusan') => {
+    if (!selectedTenderReview) return;
     setIsProcessingTender(true);
+    setTenderReviewError('');
+
     try {
-      const res = await fetch(`/api/tenders/${encodeURIComponent(tenderId)}/status`, {
+      const res = await fetch(`/api/tenders/${encodeURIComponent(selectedTenderReview.id)}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: newStatus,
-          reviewRemarks: reviewRemarksInput || 'Telah disemak oleh Pentadbir Utama JKR NS.',
-          reviewedBy: 'Admin (Pentadbir Utama)',
-          winner: newStatus === 'keputusan' ? winnerInput : undefined
+          reviewRemarks: reviewRemarksInput.trim(),
+          winner: winnerInput.trim() || undefined,
+          reviewedBy: 'Pentadbir Utama (Admin)'
         })
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setActionSuccessMsg(`Iklan ${data.data.code} telah dikemaskini kepada status "${data.data.statusLabelMs}".`);
-        setTimeout(() => setActionSuccessMsg(''), 5000);
+        setActionSuccessMsg(data.message || `Status iklan ${selectedTenderReview.code} telah dikemaskini.`);
+        setTimeout(() => setActionSuccessMsg(''), 4000);
         setSelectedTenderReview(null);
         setReviewRemarksInput('');
         setWinnerInput('');
-        await fetchTendersAndUsers();
+        await fetchAllAdminData();
       } else {
-        alert(data.error || 'Gagal mengemaskini status iklan.');
+        setTenderReviewError(data.error || 'Gagal mengemaskini status iklan.');
       }
     } catch (err: any) {
-      alert('Ralat semasa mengemaskini status iklan tender.');
+      setTenderReviewError('Ralat semasa mengemaskini status iklan tender.');
     } finally {
       setIsProcessingTender(false);
     }
@@ -213,21 +349,42 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   // --- USER ROLE MANAGEMENT HANDLERS ---
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userFormData.username || !userFormData.password || !userFormData.name) {
-      alert('Sila lengkapkan semua medan mandatori.');
+    if (!userFormData.username.trim() || !userFormData.password.trim() || !userFormData.name.trim()) {
+      setUserModalError('Sila lengkapkan Nama Penuh, Nama Pengguna, dan Kata Laluan (*).');
       return;
     }
 
+    if (userFormData.username.trim().length < 3) {
+      setUserModalError('Nama pengguna mestilah sekurang-kurangnya 3 aksara.');
+      return;
+    }
+
+    if (userFormData.password.trim().length < 3) {
+      setUserModalError('Kata laluan mestilah sekurang-kurangnya 3 aksara.');
+      return;
+    }
+
+    setIsSubmittingUser(true);
+    setUserModalError('');
+
     try {
-      const res = await fetch('/api/users', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userFormData)
+        body: JSON.stringify({
+          name: userFormData.name.trim(),
+          username: userFormData.username.trim().toLowerCase(),
+          password: userFormData.password.trim(),
+          role: userFormData.role,
+          email: userFormData.email.trim() || `${userFormData.username.trim().toLowerCase()}@jkr.gov.my`,
+          department: userFormData.department.trim() || (userFormData.role === 'Admin' ? 'Bahagian Pentadbiran & Integriti JKR NS' : 'Unit Perolehan & Kontrak JKR NS')
+        })
       });
+
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setActionSuccessMsg(data.message);
+        setActionSuccessMsg(data.message || `Pengguna "${userFormData.name}" berjaya didaftarkan.`);
         setTimeout(() => setActionSuccessMsg(''), 5000);
         setShowAddUserModal(false);
         setUserFormData({
@@ -238,12 +395,14 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           email: '',
           department: 'Unit Perolehan & Kontrak JKR NS'
         });
-        await fetchTendersAndUsers();
+        await fetchAllAdminData();
       } else {
-        alert(data.error || 'Gagal mencipta pengguna baharu.');
+        setUserModalError(data.error || 'Gagal mencipta pengguna baharu.');
       }
-    } catch (err) {
-      alert('Ralat sistem mencipta pengguna.');
+    } catch (err: any) {
+      setUserModalError('Ralat rangkaian semasa mencipta pengguna.');
+    } finally {
+      setIsSubmittingUser(false);
     }
   };
 
@@ -256,40 +415,49 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setActionSuccessMsg(`Peranan pengguna telah ditukar kepada "${newRole}".`);
+        setActionSuccessMsg(`Peranan pengguna telah dikemaskini kepada "${newRole}".`);
         setTimeout(() => setActionSuccessMsg(''), 4000);
-        await fetchTendersAndUsers();
+        await fetchAllAdminData();
       } else {
-        alert(data.error || 'Gagal menukar peranan pengguna.');
+        setActionErrorMsg(data.error || 'Gagal menukar peranan pengguna.');
       }
-    } catch (err) {
-      alert('Ralat menukar peranan pengguna.');
+    } catch (err: any) {
+      setActionErrorMsg('Ralat menukar peranan pengguna.');
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (window.confirm(`Adakah anda pasti ingin memadamkan akaun "${userName}"?`)) {
-      try {
-        const res = await fetch(`/api/users/${encodeURIComponent(userId)}`, {
-          method: 'DELETE'
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          setActionSuccessMsg(data.message);
-          setTimeout(() => setActionSuccessMsg(''), 4000);
-          await fetchTendersAndUsers();
-        } else {
-          alert(data.error || 'Gagal memadamkan pengguna.');
+  const confirmDeleteUser = (userId: string, userName: string) => {
+    setConfirmModal({
+      open: true,
+      title: 'Padam Pengguna',
+      message: `Adakah anda pasti ingin memadamkan akaun "${userName}"? Pengguna ini tidak lagi boleh mengakses sistem.`,
+      confirmText: 'Padam Pengguna',
+      confirmColor: 'bg-red-600',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/users/${encodeURIComponent(userId)}`, {
+            method: 'DELETE'
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            setActionSuccessMsg(data.message || `Pengguna "${userName}" telah dipadamkan.`);
+            setTimeout(() => setActionSuccessMsg(''), 4000);
+            await fetchAllAdminData();
+          } else {
+            setActionErrorMsg(data.error || 'Gagal memadamkan pengguna.');
+          }
+        } catch (err: any) {
+          setActionErrorMsg('Ralat memadamkan pengguna.');
+        } finally {
+          setConfirmModal((prev) => ({ ...prev, open: false }));
         }
-      } catch (err) {
-        alert('Ralat memadamkan pengguna.');
       }
-    }
+    });
   };
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans pb-16">
-      {/* ================= HEADER PENTADBIR ================= */}
+      {/* ================= HEADER ADMIN PORTAL ================= */}
       <header className="bg-slate-900 text-white shadow-lg sticky top-0 z-40">
         <div className="h-1.5 w-full flex">
           <div className="h-full w-1/2 bg-[#FFD100]"></div>
@@ -329,7 +497,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               type="button"
               onClick={async () => {
                 await onRefresh();
-                await fetchTendersAndUsers();
+                await fetchAllAdminData();
+                setActionSuccessMsg('Data sistem telah disegarkan.');
+                setTimeout(() => setActionSuccessMsg(''), 3000);
               }}
               className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs transition-colors cursor-pointer"
               title="Segar Semula Data"
@@ -371,7 +541,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             <i className="fa-solid fa-road-circle-exclamation"></i>
             <span>Pengurusan e-Aduan Awam</span>
             <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/20">
-              {complaints.length}
+              {complaintsList.length}
             </span>
           </button>
 
@@ -423,7 +593,24 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             <button
               type="button"
               onClick={() => setActionSuccessMsg('')}
-              className="text-emerald-700 hover:text-emerald-900"
+              className="text-emerald-700 hover:text-emerald-900 cursor-pointer"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        )}
+
+        {/* Notis Ralat */}
+        {actionErrorMsg && (
+          <div className="bg-red-50 border border-red-300 text-red-900 p-4 rounded-2xl text-xs font-bold flex items-center justify-between shadow-sm animate-shake">
+            <div className="flex items-center gap-2">
+              <i className="fa-solid fa-triangle-exclamation text-red-600 text-base"></i>
+              <span>{actionErrorMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActionErrorMsg('')}
+              className="text-red-700 hover:text-red-900 cursor-pointer"
             >
               <i className="fa-solid fa-xmark"></i>
             </button>
@@ -439,7 +626,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 onClick={() => setStatusFilter('Semua')}
                 className={`cursor-pointer p-4 rounded-2xl border transition-all ${
                   statusFilter === 'Semua'
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-md scale-102'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-md'
                     : 'bg-white text-slate-800 border-slate-200 hover:border-slate-400'
                 }`}
               >
@@ -452,50 +639,50 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 onClick={() => setStatusFilter('Diterima')}
                 className={`cursor-pointer p-4 rounded-2xl border transition-all ${
                   statusFilter === 'Diterima'
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-102'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-md'
                     : 'bg-white text-slate-800 border-slate-200 hover:border-blue-400'
                 }`}
               >
-                <div className="text-xs font-bold uppercase tracking-wider text-blue-500">Baru Diterima</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-blue-600">Diterima</div>
                 <div className="text-2xl sm:text-3xl font-black mt-1 text-blue-600">{diterimaCount}</div>
-                <div className="text-[11px] text-slate-500 mt-1">Menunggu siasatan tapak</div>
+                <div className="text-[11px] text-slate-500 mt-1">Menunggu siasatan</div>
               </div>
 
               <div
                 onClick={() => setStatusFilter('Dalam Siasatan')}
                 className={`cursor-pointer p-4 rounded-2xl border transition-all ${
                   statusFilter === 'Dalam Siasatan'
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md scale-102'
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
                     : 'bg-white text-slate-800 border-slate-200 hover:border-indigo-400'
                 }`}
               >
-                <div className="text-xs font-bold uppercase tracking-wider text-indigo-500">Dalam Siasatan</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-indigo-600">Siasatan</div>
                 <div className="text-2xl sm:text-3xl font-black mt-1 text-indigo-600">{siasatanCount}</div>
-                <div className="text-[11px] text-slate-500 mt-1">Penilaian juruteknik JKR</div>
+                <div className="text-[11px] text-slate-500 mt-1">Jurutera di tapak</div>
               </div>
 
               <div
                 onClick={() => setStatusFilter('Tindakan Pembaikan')}
                 className={`cursor-pointer p-4 rounded-2xl border transition-all ${
                   statusFilter === 'Tindakan Pembaikan'
-                    ? 'bg-amber-600 text-white border-amber-600 shadow-md scale-102'
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-md'
                     : 'bg-white text-slate-800 border-slate-200 hover:border-amber-400'
                 }`}
               >
-                <div className="text-xs font-bold uppercase tracking-wider text-amber-500">Tindakan Pembaikan</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-amber-600">Pembaikan</div>
                 <div className="text-2xl sm:text-3xl font-black mt-1 text-amber-600">{pembaikanCount}</div>
-                <div className="text-[11px] text-slate-500 mt-1">Kerja di tapak berjalan</div>
+                <div className="text-[11px] text-slate-500 mt-1">Kerja turapan/tindakan</div>
               </div>
 
               <div
                 onClick={() => setStatusFilter('Selesai')}
                 className={`cursor-pointer p-4 rounded-2xl border transition-all ${
                   statusFilter === 'Selesai'
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-102'
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
                     : 'bg-white text-slate-800 border-slate-200 hover:border-emerald-400'
                 }`}
               >
-                <div className="text-xs font-bold uppercase tracking-wider text-emerald-500">Selesai</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-emerald-600">Selesai</div>
                 <div className="text-2xl sm:text-3xl font-black mt-1 text-emerald-600">{selesaiCount}</div>
                 <div className="text-[11px] text-slate-500 mt-1">Telah dibaik pulih</div>
               </div>
@@ -514,20 +701,34 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   </p>
                 </div>
 
-                {(searchQuery || statusFilter !== 'Semua' || districtFilter !== 'Semua') && (
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
-                      setSearchQuery('');
-                      setStatusFilter('Semua');
-                      setDistrictFilter('Semua');
+                      setManualAduanError('');
+                      setShowManualAduanModal(true);
                     }}
-                    className="text-xs text-red-600 hover:text-red-800 font-bold flex items-center gap-1 cursor-pointer"
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
                   >
-                    <i className="fa-solid fa-rotate-left"></i>
-                    <span>Set Semula Penapis</span>
+                    <i className="fa-solid fa-plus text-[#FFD100]"></i>
+                    <span>Daftar Aduan Manual</span>
                   </button>
-                )}
+
+                  {(searchQuery || statusFilter !== 'Semua' || districtFilter !== 'Semua') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setStatusFilter('Semua');
+                        setDistrictFilter('Semua');
+                      }}
+                      className="text-xs text-red-600 hover:text-red-800 font-bold flex items-center gap-1 cursor-pointer ml-1"
+                    >
+                      <i className="fa-solid fa-rotate-left"></i>
+                      <span>Set Semula</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
@@ -583,17 +784,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                     <i className="fa-solid fa-list-check text-slate-700"></i>
                     <span>Senarai Penuh Maklumat e-Aduan Pengguna</span>
                     <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold ml-1">
-                      {filteredComplaints.length} rekod
+                      {filteredComplaints.length} rekod dipaparkan
                     </span>
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Hanya boleh diakses oleh Pentadbir yang disahkan. Disegerakkan ke pangkalan data Cloudflare.
+                    Disimpan secara kekal dalam pangkalan data dan sedia diselaraskan ke Cloudflare.
                   </p>
                 </div>
 
                 <div className="text-xs text-slate-500 flex items-center gap-2">
                   <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-                  <span>Storan: {cloudflareInfo.provider}</span>
+                  <span>Mod Storan: {cloudflareInfo.provider}</span>
                 </div>
               </div>
 
@@ -601,7 +802,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 <div className="p-12 text-center text-slate-500">
                   <i className="fa-solid fa-folder-open text-3xl mb-2 text-slate-300"></i>
                   <h4 className="font-bold text-slate-800 text-sm">Tiada Rekod Aduan Ditemui</h4>
-                  <p className="text-xs text-slate-500 mt-1">Sila laraskan kriteria carian atau penapis daerah/status.</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {searchQuery || statusFilter !== 'Semua' || districtFilter !== 'Semua'
+                      ? 'Sila laraskan kriteria carian atau penapis daerah/status.'
+                      : 'Belum ada sebarang aduan didaftarkan. Aduan yang diisi pada borang awam akan terus muncul di sini.'}
+                  </p>
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100">
@@ -616,20 +821,20 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             {item.id}
                           </span>
                           <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-200 text-slate-800">
-                            Daerah {item.district}
+                            Daerah {item.district || 'Seremban'}
                           </span>
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                              item.status === 'Selesai'
+                              (item.status || '').includes('Selesai')
                                 ? 'bg-emerald-100 text-emerald-800'
-                                : item.status === 'Tindakan Pembaikan'
+                                : (item.status || '').includes('Pembaikan')
                                 ? 'bg-amber-100 text-amber-800'
-                                : item.status === 'Dalam Siasatan'
+                                : (item.status || '').includes('Siasatan')
                                 ? 'bg-indigo-100 text-indigo-800'
                                 : 'bg-blue-100 text-blue-800'
                             }`}
                           >
-                            {item.status}
+                            {item.status || 'Diterima'}
                           </span>
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
                             <i className="fa-solid fa-cloud text-sky-500"></i>
@@ -638,7 +843,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         </div>
 
                         <h4 className="font-black text-slate-900 text-sm sm:text-base">
-                          {item.category}
+                          {item.category || 'Aduan Awam JKR'}
                         </h4>
 
                         <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
@@ -658,13 +863,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             <span>{item.phone}</span>
                           </a>
                           <a
-                            href={`https://maps.google.com/?q=${encodeURIComponent(item.gps)}`}
+                            href={`https://maps.google.com/?q=${encodeURIComponent(item.gps || '2.6922° N, 101.9056° E')}`}
                             target="_blank"
                             rel="noreferrer"
                             className="flex items-center gap-1.5 text-emerald-700 hover:underline"
                           >
                             <i className="fa-solid fa-location-dot text-[#DC2626]"></i>
-                            <span>{item.gps}</span>
+                            <span>{item.gps || 'Seremban'}</span>
                           </a>
                           <span className="flex items-center gap-1.5 text-slate-400">
                             <i className="fa-solid fa-clock"></i>
@@ -692,7 +897,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
                         <div className="flex flex-col gap-1.5 w-full sm:w-auto">
                           <span className="text-[10px] uppercase font-bold text-slate-400 text-left lg:text-right">
-                            Tukar Status:
+                            Tukar Status Tindakan:
                           </span>
                           <div className="flex flex-wrap items-center gap-1">
                             <button
@@ -733,7 +938,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDeleteComplaintLocal(item.id)}
+                              onClick={() => confirmDeleteComplaint(item.id)}
                               className="px-2 py-1 rounded-lg text-[10px] font-bold bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-colors cursor-pointer ml-1"
                               title="Padam Aduan"
                             >
@@ -753,34 +958,23 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         {/* ================= TAB 2: SEMAKAN & KELULUSAN IKLAN TENDER ================= */}
         {activeTab === 'tender_review' && (
           <div className="space-y-6 animate-fadeIn">
-            {/* Banner Penjelasan Aliran Semakan */}
-            <div className="bg-amber-50 border-l-4 border-amber-500 p-5 rounded-2xl shadow-xs">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <h3 className="font-black text-slate-900 text-sm sm:text-base flex items-center gap-2">
-                    <i className="fa-solid fa-stamp text-amber-600"></i>
-                    <span>Pusat Kelulusan Iklan Tender &amp; Sebutharga JKR NS</span>
-                  </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed max-w-3xl">
-                    Semua iklan tender yang didaftarkan oleh <strong>Penyelaras Iklan</strong> mesti disemak dan diluluskan oleh Admin sebelum disiarkan pada portal awam. Anda boleh meluluskan tawaran (status: <em>Sedang Dibuka</em>), menolak untuk pindaan, atau mengemaskini keputusan penender.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="px-3 py-1 bg-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-xs">
-                    {pendingTendersCount} Iklan Menunggu Tindakan
-                  </span>
-                </div>
+            {/* Header Semakan Tender */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-black text-slate-900 text-base sm:text-lg flex items-center gap-2">
+                  <i className="fa-solid fa-clipboard-check text-amber-500"></i>
+                  <span>Pusat Kelulusan Iklan Tender &amp; Sebut Harga</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Setiap iklan yang didaftarkan oleh Penyelaras Iklan mesti disemak dan diluluskan oleh Admin sebelum disiarkan di portal awam.
+                </p>
               </div>
-            </div>
 
-            {/* Carian & Penapis Tender */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-2 text-xs font-bold">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setTenderFilterStatus('Semua')}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     tenderFilterStatus === 'Semua' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
@@ -789,43 +983,21 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 <button
                   type="button"
                   onClick={() => setTenderFilterStatus('menunggu_kelulusan')}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                    tenderFilterStatus === 'menunggu_kelulusan'
-                      ? 'bg-amber-500 text-slate-950'
-                      : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    tenderFilterStatus === 'menunggu_kelulusan' ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  ⏳ Menunggu Semakan ({pendingTendersCount})
+                  Menunggu Semakan ({pendingTendersCount})
                 </button>
                 <button
                   type="button"
                   onClick={() => setTenderFilterStatus('buka')}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     tenderFilterStatus === 'buka' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
                   Sedang Dibuka ({openTendersCount})
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setTenderFilterStatus('tutup')}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                    tenderFilterStatus === 'tutup' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Ditutup / Penilaian
-                </button>
-              </div>
-
-              <div className="relative">
-                <input
-                  type="text"
-                  value={tenderSearchQuery}
-                  onChange={(e) => setTenderSearchQuery(e.target.value)}
-                  placeholder="Cari no tender / tajuk..."
-                  className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs w-56 focus:outline-none focus:ring-2 focus:ring-[#FFD100]"
-                />
-                <i className="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
               </div>
             </div>
 
@@ -835,7 +1007,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 {filteredTenders.length === 0 ? (
                   <div className="p-12 text-center text-slate-500">
                     <i className="fa-solid fa-file-circle-check text-3xl mb-2 text-slate-300"></i>
-                    <p className="text-sm font-semibold">Tiada iklan tender ditemui.</p>
+                    <p className="text-sm font-semibold">Tiada iklan tender ditemui bagi penapis ini.</p>
                   </div>
                 ) : (
                   filteredTenders.map((t) => (
@@ -905,6 +1077,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                               onClick={() => {
                                 setSelectedTenderReview(t);
                                 setReviewRemarksInput('Spesifikasi disahkan mematuhi gred CIDB dan piawaian JKR NS.');
+                                setTenderReviewError('');
                               }}
                               className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
                             >
@@ -916,6 +1089,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                               onClick={() => {
                                 setSelectedTenderReview(t);
                                 setReviewRemarksInput('Sila perbetulkan syarat kelayakan gred CIDB atau tarikh tutup.');
+                                setTenderReviewError('');
                               }}
                               className="w-full sm:w-auto px-3.5 py-2 bg-red-100 hover:bg-red-200 text-red-800 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
                             >
@@ -931,6 +1105,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                 setSelectedTenderReview(t);
                                 setReviewRemarksInput(t.reviewRemarks || '');
                                 setWinnerInput(t.winner || '');
+                                setTenderReviewError('');
                               }}
                               className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer"
                             >
@@ -959,7 +1134,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   <span>Pengurusan Pengguna, Pentadbir &amp; Penyelaras Iklan</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Pentadbir boleh menambah, mengedit peranan (Role: Admin / Penyelaras Iklan), dan membuang pengguna.
+                  Pentadbir boleh menambah akaun baharu, mengedit peranan (Role: Admin / Penyelaras Iklan), dan membuang pengguna.
                 </p>
               </div>
 
@@ -974,6 +1149,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                     email: '',
                     department: 'Unit Perolehan & Tender JKR NS'
                   });
+                  setUserModalError('');
                   setShowAddUserModal(true);
                 }}
                 className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer whitespace-nowrap"
@@ -1027,7 +1203,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
                     {/* Tindakan Edit / Tukar Role / Padam */}
                     <div className="flex items-center gap-2 self-start sm:self-center">
-                      {/* Butang Tukar Peranan Segera */}
                       <button
                         type="button"
                         onClick={() =>
@@ -1037,16 +1212,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           )
                         }
                         className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                        title="Tukar Peranan"
+                        title="Tukar Peranan Pengguna"
                       >
                         <i className="fa-solid fa-arrows-rotate text-amber-600"></i>
                         <span>Tukar ke {u.role === 'Admin' ? 'Penyelaras' : 'Admin'}</span>
                       </button>
 
-                      {/* Padam Pengguna */}
                       <button
                         type="button"
-                        onClick={() => handleDeleteUser(u.id, u.name)}
+                        onClick={() => confirmDeleteUser(u.id, u.name)}
                         className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs transition-colors cursor-pointer"
                         title="Padam Pengguna"
                       >
@@ -1088,97 +1262,79 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedTenderReview(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 <i className="fa-solid fa-xmark text-lg"></i>
               </button>
             </div>
 
+            {tenderReviewError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-xs mb-3 flex items-center gap-2 animate-shake">
+                <i className="fa-solid fa-triangle-exclamation flex-shrink-0"></i>
+                <span>{tenderReviewError}</span>
+              </div>
+            )}
+
             <div className="space-y-3.5 text-xs">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
                 <div className="font-bold text-slate-900">{selectedTenderReview.title}</div>
                 <div className="text-slate-500 flex flex-wrap gap-x-3 text-[11px]">
-                  <span>Daerah: <strong>{selectedTenderReview.district}</strong></span>
-                  <span>Gred: <strong>{selectedTenderReview.cidb}</strong></span>
-                  <span>Tutup: <strong>{selectedTenderReview.closingDate}</strong></span>
+                  <span>Daerah: {selectedTenderReview.district}</span>
+                  <span>CIDB: {selectedTenderReview.cidb}</span>
+                  <span>Tutup: {selectedTenderReview.closingDate}</span>
                 </div>
               </div>
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Ulasan &amp; Nota Semakan Pentadbir (Admin Remarks)
+                  Ulasan / Catatan Semakan Pentadbir
                 </label>
                 <textarea
-                  rows={2}
+                  rows={3}
                   value={reviewRemarksInput}
                   onChange={(e) => setReviewRemarksInput(e.target.value)}
-                  placeholder="Catatan semakan atau arahan pindaan..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#FFD100]"
+                  placeholder="Masukkan ulasan kelulusan atau arahan pindaan..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD100]"
                 ></textarea>
               </div>
 
-              {selectedTenderReview.status === 'tutup' && (
+              {selectedTenderReview.status === 'keputusan' && (
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Nama Syarikat Pemenang (Keputusan Rasmi)
-                  </label>
+                  <label className="block font-bold text-slate-700 mb-1">Nama Syarikat Pemenang</label>
                   <input
                     type="text"
                     value={winnerInput}
                     onChange={(e) => setWinnerInput(e.target.value)}
-                    placeholder="Contoh: Maju Teguh Construction Sdn Bhd"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#FFD100]"
+                    placeholder="Contoh: Pembinaan Teguh Sdn Bhd"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD100]"
                   />
                 </div>
               )}
 
-              <div className="pt-2 flex flex-col sm:flex-row gap-2 justify-end">
+              <div className="pt-2 flex flex-wrap gap-2 justify-end">
                 <button
                   type="button"
                   disabled={isProcessingTender}
-                  onClick={() => handleReviewTenderStatus(selectedTenderReview.id, 'buka')}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                  onClick={() => handleTenderReviewAction('ditolak')}
+                  className="px-3.5 py-2 bg-red-100 hover:bg-red-200 text-red-800 rounded-xl font-bold cursor-pointer transition-colors"
                 >
-                  <i className="fa-solid fa-check-double"></i>
-                  <span>Luluskan &amp; Buka Siaran</span>
+                  Tolak / Pindaan
                 </button>
-
                 <button
                   type="button"
                   disabled={isProcessingTender}
-                  onClick={() => handleReviewTenderStatus(selectedTenderReview.id, 'ditolak')}
-                  className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-800 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  onClick={() => handleTenderReviewAction('buka')}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold cursor-pointer transition-colors shadow-sm"
                 >
-                  <i className="fa-solid fa-xmark"></i>
-                  <span>Tolak / Pindaan</span>
+                  Luluskan (Siarkan ke Portal)
                 </button>
-
-                <button
-                  type="button"
-                  disabled={isProcessingTender}
-                  onClick={() => handleReviewTenderStatus(selectedTenderReview.id, 'tutup')}
-                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center cursor-pointer"
-                >
-                  Tutup Tawaran
-                </button>
-
-                {selectedTenderReview.status === 'tutup' && (
-                  <button
-                    type="button"
-                    disabled={isProcessingTender}
-                    onClick={() => handleReviewTenderStatus(selectedTenderReview.id, 'keputusan')}
-                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    Umum Keputusan
-                  </button>
-                )}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ================= MODAL TAMBAH PENGGUNA & PERANAN ================= */}
+      {/* ================= MODAL TAMBAH PENGGUNA BAHARU ================= */}
       {showAddUserModal && (
         <div
           className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 animate-fadeIn"
@@ -1193,20 +1349,29 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 <div className="w-8 h-8 rounded-lg bg-slate-900 text-[#FFD100] flex items-center justify-center font-bold">
                   <i className="fa-solid fa-user-plus"></i>
                 </div>
-                <h4 className="font-black text-slate-900 text-base">Tambah Pengguna &amp; Peranan</h4>
+                <h4 className="font-black text-slate-900 text-sm sm:text-base">
+                  Daftar Pengguna / Peranan Baharu
+                </h4>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAddUserModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 <i className="fa-solid fa-xmark text-lg"></i>
               </button>
             </div>
 
+            {userModalError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-xs mb-3 flex items-center gap-2 animate-shake">
+                <i className="fa-solid fa-triangle-exclamation flex-shrink-0"></i>
+                <span>{userModalError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleCreateUser} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Peranan (Role) Pengguna *</label>
+                <label className="block font-bold text-slate-700 mb-1">Pilih Peranan (Role) Pengguna *</label>
                 <div className="grid grid-cols-2 gap-2">
                   <label
                     className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer ${
@@ -1281,7 +1446,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Emel Jabatan</label>
+                <label className="block font-bold text-slate-700 mb-1">Emel Jabatan (Pilihan)</label>
                 <input
                   type="email"
                   value={userFormData.email}
@@ -1292,7 +1457,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Bahagian / Cawangan</label>
+                <label className="block font-bold text-slate-700 mb-1">Bahagian / Cawangan (Pilihan)</label>
                 <input
                   type="text"
                   value={userFormData.department}
@@ -1312,10 +1477,160 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  disabled={isSubmittingUser}
+                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-70"
                 >
-                  <i className="fa-solid fa-plus text-[#FFD100]"></i>
+                  {isSubmittingUser ? (
+                    <i className="fa-solid fa-spinner fa-spin text-[#FFD100]"></i>
+                  ) : (
+                    <i className="fa-solid fa-plus text-[#FFD100]"></i>
+                  )}
                   <span>Daftar Pengguna</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL DAFTAR ADUAN MANUAL ================= */}
+      {showManualAduanModal && (
+        <div
+          className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setShowManualAduanModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 overflow-hidden transform transition-all"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center font-bold">
+                  <i className="fa-solid fa-file-pen"></i>
+                </div>
+                <h4 className="font-black text-slate-900 text-sm sm:text-base">
+                  Daftar e-Aduan Awam Secara Manual
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowManualAduanModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <i className="fa-solid fa-xmark text-lg"></i>
+              </button>
+            </div>
+
+            {manualAduanError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-xs mb-3 flex items-center gap-2 animate-shake">
+                <i className="fa-solid fa-triangle-exclamation flex-shrink-0"></i>
+                <span>{manualAduanError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleManualAduanSubmit} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Nama Penuh Pengadu *</label>
+                  <input
+                    type="text"
+                    required
+                    value={manualAduanForm.nama}
+                    onChange={(e) => setManualAduanForm({ ...manualAduanForm, nama: e.target.value })}
+                    placeholder="Nama pengadu"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD100]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">No. Telefon Pengadu *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={manualAduanForm.telefon}
+                    onChange={(e) => setManualAduanForm({ ...manualAduanForm, telefon: e.target.value })}
+                    placeholder="012-3456789"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD100]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Daerah *</label>
+                  <select
+                    value={manualAduanForm.daerah}
+                    onChange={(e) => setManualAduanForm({ ...manualAduanForm, daerah: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD100]"
+                  >
+                    <option value="Seremban">Seremban</option>
+                    <option value="Port Dickson">Port Dickson</option>
+                    <option value="Rembau">Rembau</option>
+                    <option value="Kuala Pilah">Kuala Pilah</option>
+                    <option value="Jempol">Jempol</option>
+                    <option value="Jelebu">Jelebu</option>
+                    <option value="Tampin">Tampin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Kategori Kerosakan *</label>
+                  <select
+                    value={manualAduanForm.kategori}
+                    onChange={(e) => setManualAduanForm({ ...manualAduanForm, kategori: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD100]"
+                  >
+                    <option value="Jalan Berlubang (Pothole) - Tindakan 24 Jam">Jalan Berlubang (Pothole)</option>
+                    <option value="Lampu Isyarat Rosak / Padam">Lampu Isyarat Rosak</option>
+                    <option value="Runtuhan Cerun / Tebing">Runtuhan Cerun</option>
+                    <option value="Papan Tanda Tumbang / Halangan">Papan Tanda Tumbang</option>
+                    <option value="Lain-lain Kerosakan">Lain-lain Kerosakan</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Koordinat GPS / Lokasi Spesifik</label>
+                <input
+                  type="text"
+                  value={manualAduanForm.gps}
+                  onChange={(e) => setManualAduanForm({ ...manualAduanForm, gps: e.target.value })}
+                  placeholder="Contoh: 2.6922° N, 101.9056° E"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-[#FFD100]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Keterangan / Butiran Aduan *</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={manualAduanForm.keterangan}
+                  onChange={(e) => setManualAduanForm({ ...manualAduanForm, keterangan: e.target.value })}
+                  placeholder="Perincikan masalah kerosakan atau lokasi kejadian..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FFD100]"
+                ></textarea>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowManualAduanModal(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingAduan}
+                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-70"
+                >
+                  {isSubmittingAduan ? (
+                    <i className="fa-solid fa-spinner fa-spin text-[#FFD100]"></i>
+                  ) : (
+                    <i className="fa-solid fa-paper-plane text-[#FFD100]"></i>
+                  )}
+                  <span>Daftar Aduan</span>
                 </button>
               </div>
             </form>
@@ -1341,7 +1656,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               <button
                 type="button"
                 onClick={() => setPreviewImage(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
                 <i className="fa-solid fa-xmark text-lg"></i>
               </button>
@@ -1360,6 +1675,47 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 className="px-5 py-2 bg-[#111827] text-white font-bold rounded-xl text-xs hover:bg-slate-800 cursor-pointer"
               >
                 Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= CUSTOM CONFIRM DIALOG (TANPA WINDOW.CONFIRM) ================= */}
+      {confirmModal.open && (
+        <div
+          className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 overflow-hidden transform transition-all"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-lg font-bold">
+                <i className="fa-solid fa-triangle-exclamation"></i>
+              </div>
+              <h4 className="font-black text-slate-900 text-base">
+                {confirmModal.title}
+              </h4>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed mb-6">
+              {confirmModal.message}
+            </p>
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => confirmModal.onConfirm()}
+                className={`px-5 py-2 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-sm ${confirmModal.confirmColor || 'bg-red-600 hover:bg-red-700'}`}
+              >
+                {confirmModal.confirmText || 'Sahkan'}
               </button>
             </div>
           </div>
