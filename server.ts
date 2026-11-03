@@ -15,7 +15,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Data structure for e-Aduan
+// ================= DATA STRUCTURES =================
 export interface AduanRecord {
   id: string;
   name: string;
@@ -31,16 +31,57 @@ export interface AduanRecord {
   cloudflareProvider?: string;
 }
 
+export interface UserRecord {
+  id: string;
+  username: string;
+  password: string;
+  name: string;
+  role: 'Admin' | 'Penyelaras Iklan';
+  email: string;
+  department: string;
+  status: 'Aktif' | 'Tidak Aktif';
+  createdAt: string;
+}
+
+export interface TenderRecord {
+  id: string;
+  code: string;
+  title: string;
+  titleEn?: string;
+  category: string;
+  district: string;
+  closingDate: string;
+  openingDate?: string;
+  cidb: string;
+  estimatedCost?: string;
+  docPrice?: string;
+  siteVisit?: string;
+  description?: string;
+  documentUrl?: string;
+  status: 'menunggu_kelulusan' | 'buka' | 'tutup' | 'keputusan' | 'ditolak';
+  statusLabelMs?: string;
+  winner?: string;
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewRemarks?: string;
+}
+
 // Local cache / persistence directory
 const DATA_DIR = path.resolve(__dirname, 'data');
-const DATA_FILE = path.resolve(DATA_DIR, 'aduan-store.json');
+const ADUAN_FILE = path.resolve(DATA_DIR, 'aduan-store.json');
+const USERS_FILE = path.resolve(DATA_DIR, 'users-store.json');
+const TENDERS_FILE = path.resolve(DATA_DIR, 'tenders-store.json');
 
+// --- 1. Aduan Store ---
 async function ensureDataStore(): Promise<AduanRecord[]> {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       await fsPromises.mkdir(DATA_DIR, { recursive: true });
     }
-    if (!fs.existsSync(DATA_FILE)) {
+    if (!fs.existsSync(ADUAN_FILE)) {
       const initial: AduanRecord[] = [
         {
           id: 'JKRNS-2026-881924',
@@ -56,10 +97,10 @@ async function ensureDataStore(): Promise<AduanRecord[]> {
           cloudflareProvider: 'Local Secured Vault'
         }
       ];
-      await fsPromises.writeFile(DATA_FILE, JSON.stringify(initial, null, 2), 'utf-8');
+      await fsPromises.writeFile(ADUAN_FILE, JSON.stringify(initial, null, 2), 'utf-8');
       return initial;
     }
-    const content = await fsPromises.readFile(DATA_FILE, 'utf-8');
+    const content = await fsPromises.readFile(ADUAN_FILE, 'utf-8');
     return JSON.parse(content);
   } catch (err) {
     console.error('[Storage Error] Failed reading local aduan store:', err);
@@ -72,9 +113,196 @@ async function writeDataStore(records: AduanRecord[]): Promise<void> {
     if (!fs.existsSync(DATA_DIR)) {
       await fsPromises.mkdir(DATA_DIR, { recursive: true });
     }
-    await fsPromises.writeFile(DATA_FILE, JSON.stringify(records, null, 2), 'utf-8');
+    await fsPromises.writeFile(ADUAN_FILE, JSON.stringify(records, null, 2), 'utf-8');
   } catch (err) {
     console.error('[Storage Error] Failed writing local aduan store:', err);
+  }
+}
+
+// --- 2. Users Store ---
+async function ensureUsersStore(): Promise<UserRecord[]> {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      await fsPromises.mkdir(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(USERS_FILE)) {
+      const initial: UserRecord[] = [
+        {
+          id: 'user-admin-1',
+          username: 'admin',
+          password: '123',
+          name: 'Pentadbir Utama JKR NS',
+          role: 'Admin',
+          email: 'admin.jkr@ns.gov.my',
+          department: 'Bahagian Pentadbiran & Integriti JKR NS',
+          status: 'Aktif',
+          createdAt: '01 Nov 2026'
+        },
+        {
+          id: 'user-penyelaras-1',
+          username: 'penyelaras',
+          password: '123',
+          name: 'Penyelaras Perolehan & Tender JKR',
+          role: 'Penyelaras Iklan',
+          email: 'penyelaras.tender@ns.gov.my',
+          department: 'Unit Perolehan & Kontrak JKR NS',
+          status: 'Aktif',
+          createdAt: '01 Nov 2026'
+        }
+      ];
+      await fsPromises.writeFile(USERS_FILE, JSON.stringify(initial, null, 2), 'utf-8');
+      return initial;
+    }
+    const content = await fsPromises.readFile(USERS_FILE, 'utf-8');
+    return JSON.parse(content);
+  } catch (err) {
+    console.error('[Storage Error] Failed reading users store:', err);
+    return [];
+  }
+}
+
+async function writeUsersStore(records: UserRecord[]): Promise<void> {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      await fsPromises.mkdir(DATA_DIR, { recursive: true });
+    }
+    await fsPromises.writeFile(USERS_FILE, JSON.stringify(records, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('[Storage Error] Failed writing users store:', err);
+  }
+}
+
+// --- 3. Tenders Store ---
+async function ensureTendersStore(): Promise<TenderRecord[]> {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      await fsPromises.mkdir(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(TENDERS_FILE)) {
+      const initial: TenderRecord[] = [
+        {
+          id: 't-1',
+          code: 'JKR/NS/JALAN/04/2026',
+          title: 'Kerja-kerja Memperelok dan Menurap Semula Laluan FT001 (Seremban - Rembau)',
+          titleEn: 'Road Rehabilitation and Resurfacing Works on Route FT001 (Seremban - Rembau)',
+          category: 'Kerja Jalan & Turapan',
+          district: 'Rembau',
+          closingDate: '28 November 2026',
+          openingDate: '28 Oktober 2026',
+          cidb: 'CIDB G4 / G5 (CE21)',
+          estimatedCost: 'RM 1,250,000.00',
+          docPrice: 'RM 100.00',
+          siteVisit: 'Wajib (10 Nov 2026, 10:00 AM di JKR Rembau)',
+          status: 'buka',
+          statusLabelMs: 'Sedang Dibuka',
+          createdBy: 'admin',
+          createdByName: 'Pentadbir Utama JKR NS',
+          createdAt: '28 Okt 2026',
+          reviewedBy: 'admin',
+          reviewedAt: '28 Okt 2026',
+          reviewRemarks: 'Diluluskan untuk siaran portal rasmi.'
+        },
+        {
+          id: 't-2',
+          code: 'JKR/NS/JAMB/09/2026',
+          title: 'Penyelenggaraan Struktur Jambatan Sungai Linggi di Laluan N12 (Port Dickson)',
+          titleEn: 'Structural Bridge Maintenance of Sungai Linggi Bridge on Route N12 (Port Dickson)',
+          category: 'Kejuruteraan Jambatan',
+          district: 'Port Dickson',
+          closingDate: '18 November 2026',
+          openingDate: '20 Oktober 2026',
+          cidb: 'CIDB G3 (CE02)',
+          estimatedCost: 'RM 480,000.00',
+          docPrice: 'RM 50.00',
+          siteVisit: 'Pilihan',
+          status: 'buka',
+          statusLabelMs: 'Sedang Dibuka',
+          createdBy: 'admin',
+          createdByName: 'Pentadbir Utama JKR NS',
+          createdAt: '20 Okt 2026',
+          reviewedBy: 'admin',
+          reviewedAt: '20 Okt 2026',
+          reviewRemarks: 'Spesifikasi jambatan lengkap.'
+        },
+        {
+          id: 't-3',
+          code: 'JKR/NS/BGN/01/2026',
+          title: 'Membina Dewan Serbaguna Berkonsep Minangkabau di Kuala Pilah',
+          titleEn: 'Construction of Minangkabau Architectural Concept Multipurpose Hall in Kuala Pilah',
+          category: 'Bangunan Awam',
+          district: 'Kuala Pilah',
+          closingDate: '24 Oktober 2026',
+          openingDate: '24 September 2026',
+          cidb: 'CIDB G5 / G6 (B04)',
+          status: 'tutup',
+          statusLabelMs: 'Telah Ditutup (Penilaian)',
+          createdBy: 'penyelaras',
+          createdByName: 'Penyelaras Perolehan JKR NS',
+          createdAt: '24 Sep 2026',
+          reviewedBy: 'admin',
+          reviewedAt: '25 Sep 2026',
+          reviewRemarks: 'Diluluskan. Kini dalam peringkat penilaian teknikal tender.'
+        },
+        {
+          id: 't-4',
+          code: 'JKR/NS/ELK/02/2026',
+          title: 'Pemasangan Lampu Jalan Solar Pintar Sepanjang Laluan Persekutuan Jempol',
+          titleEn: 'Installation of Smart Solar Street Lights along Federal Route Jempol',
+          category: 'Elektrikal',
+          district: 'Jempol',
+          closingDate: '15 Oktober 2026',
+          openingDate: '15 September 2026',
+          cidb: 'CIDB G3 / G4 (E11)',
+          status: 'keputusan',
+          statusLabelMs: 'Keputusan Rasmi',
+          winner: 'Wawasan Elektrik NS Sdn Bhd',
+          createdBy: 'penyelaras',
+          createdByName: 'Penyelaras Perolehan JKR NS',
+          createdAt: '15 Sep 2026',
+          reviewedBy: 'admin',
+          reviewedAt: '16 Sep 2026',
+          reviewRemarks: 'Keputusan telah disahkan.'
+        },
+        {
+          id: 't-5',
+          code: 'JKR/NS/CERUN/11/2026',
+          title: 'Kerja Pembaikan Runtuhan Cerun Laluan FT086 (Jelebu - Pantai KM 14-16)',
+          titleEn: 'Slope Failure Remediation Works on Route FT086 (Jelebu - Pantai KM 14-16)',
+          category: 'Kejuruteraan Cerun & Geoteknik',
+          district: 'Jelebu',
+          closingDate: '12 Disember 2026',
+          openingDate: '02 November 2026',
+          cidb: 'CIDB G4 (CE08 / CE12)',
+          estimatedCost: 'RM 890,000.00',
+          docPrice: 'RM 80.00',
+          siteVisit: 'Wajib (15 Nov 2026 di tapak projek)',
+          description: 'Kerja-kerja menstabilkan cerun kritikal, pemasangan soil nailing, dan sistem perparitan cerun konkrit bertetulang.',
+          status: 'menunggu_kelulusan',
+          statusLabelMs: 'Menunggu Kelulusan Admin',
+          createdBy: 'penyelaras',
+          createdByName: 'Penyelaras Perolehan & Tender JKR',
+          createdAt: '02 Nov 2026'
+        }
+      ];
+      await fsPromises.writeFile(TENDERS_FILE, JSON.stringify(initial, null, 2), 'utf-8');
+      return initial;
+    }
+    const content = await fsPromises.readFile(TENDERS_FILE, 'utf-8');
+    return JSON.parse(content);
+  } catch (err) {
+    console.error('[Storage Error] Failed reading tenders store:', err);
+    return [];
+  }
+}
+
+async function writeTendersStore(records: TenderRecord[]): Promise<void> {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      await fsPromises.mkdir(DATA_DIR, { recursive: true });
+    }
+    await fsPromises.writeFile(TENDERS_FILE, JSON.stringify(records, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('[Storage Error] Failed writing tenders store:', err);
   }
 }
 
@@ -132,10 +360,8 @@ async function ensureCloudflareD1Table(config: CloudflareConfig): Promise<boolea
       d1Initialized = true;
       console.log('[Cloudflare D1] Database table "aduan" verified / created successfully.');
       return true;
-    } else {
-      console.warn('[Cloudflare D1] Migration response warning:', json.errors);
-      return false;
     }
+    return false;
   } catch (error) {
     console.error('[Cloudflare D1] Table verification failed:', error);
     return false;
@@ -145,7 +371,6 @@ async function ensureCloudflareD1Table(config: CloudflareConfig): Promise<boolea
 async function persistToCloudflare(record: AduanRecord): Promise<{ success: boolean; provider: string; error?: string }> {
   const config = getCloudflareConfig();
 
-  // Mode 1: Cloudflare D1 SQL Database
   if (config.accountId && config.apiToken && config.d1DatabaseId) {
     try {
       await ensureCloudflareD1Table(config);
@@ -178,16 +403,13 @@ async function persistToCloudflare(record: AduanRecord): Promise<{ success: bool
       const json = await res.json() as any;
       if (json.success) {
         return { success: true, provider: 'Cloudflare D1 Database' };
-      } else {
-        const errMsg = json.errors?.[0]?.message || 'Cloudflare D1 query error';
-        return { success: false, provider: 'Cloudflare D1', error: errMsg };
       }
+      return { success: false, provider: 'Cloudflare D1', error: json.errors?.[0]?.message };
     } catch (err: any) {
       return { success: false, provider: 'Cloudflare D1', error: err?.message || String(err) };
     }
   }
 
-  // Mode 2: Cloudflare Custom Worker Endpoint
   if (config.workerUrl) {
     try {
       const endpoint = config.workerUrl.replace(/\/+$/, '') + '/api/aduan';
@@ -205,7 +427,6 @@ async function persistToCloudflare(record: AduanRecord): Promise<{ success: bool
     }
   }
 
-  // Mode 3: Cloudflare KV Namespace
   if (config.accountId && config.apiToken && config.kvNamespaceId) {
     try {
       const url = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/storage/kv/namespaces/${config.kvNamespaceId}/values/${record.id}`;
@@ -227,7 +448,6 @@ async function persistToCloudflare(record: AduanRecord): Promise<{ success: bool
     }
   }
 
-  // Default fallback
   return {
     success: false,
     provider: 'Local Secured Vault (Pending Cloudflare Connection)',
@@ -273,6 +493,11 @@ async function startServer() {
 
   app.use(express.json({ limit: '15mb' }));
   app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+
+  // Ensure initial data stores
+  await ensureDataStore();
+  await ensureUsersStore();
+  await ensureTendersStore();
 
   // API Status & Health
   app.get('/api/health', (req: Request, res: Response) => {
@@ -324,63 +549,370 @@ async function startServer() {
     });
   });
 
-  // POST /api/admin/login - Admin authentication
-  app.post('/api/admin/login', (req: Request, res: Response) => {
-    const { username, password } = req.body;
-    if (username === 'admin' && password === '123') {
-      res.json({
-        success: true,
-        message: 'Log masuk pentadbir berjaya',
-        token: 'jkr-ns-admin-session-token-2026',
-        user: {
-          username: 'admin',
-          name: 'Pentadbir Utama JKR NS',
-          role: 'Administrator',
-          department: 'Bahagian Jalan & Infrastruktur Negeri Sembilan'
-        }
-      });
-    } else {
-      res.status(401).json({
-        success: false,
-        error: 'Nama pengguna atau kata laluan salah. Sila cuba lagi.'
-      });
-    }
-  });
-
-  // GET /api/admin/verify - Verify admin token
-  app.get('/api/admin/verify', (req: Request, res: Response) => {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.includes('jkr-ns-admin-session-token-2026')) {
-      res.json({
-        success: true,
-        authenticated: true,
-        user: {
-          username: 'admin',
-          name: 'Pentadbir Utama JKR NS',
-          role: 'Administrator'
-        }
-      });
-    } else {
-      res.status(401).json({ success: false, authenticated: false });
-    }
-  });
-
-  // DELETE /api/aduan/:id - Admin delete complaint
-  app.delete('/api/aduan/:id', async (req: Request, res: Response) => {
+  // ================= AUTHENTICATION & ROLE-BASED LOGIN =================
+  // POST /api/auth/login - Role-based login (Admin & Penyelaras Iklan)
+  app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
-      const records = await ensureDataStore();
-      const updated = records.filter((r) => r.id.toUpperCase() !== id.toUpperCase());
-      if (updated.length === records.length) {
-        return res.status(404).json({ success: false, error: 'Aduan tidak dijumpai' });
+      const { username, password, requestedRole } = req.body;
+      const users = await ensureUsersStore();
+
+      const user = users.find(
+        (u) =>
+          u.username.toLowerCase() === String(username).toLowerCase().trim() &&
+          u.password === String(password).trim()
+      );
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Nama pengguna atau kata laluan tidak sah.'
+        });
       }
-      await writeDataStore(updated);
-      res.json({ success: true, message: `Aduan ${id} telah berjaya dipadamkan.` });
+
+      if (user.status !== 'Aktif') {
+        return res.status(403).json({
+          success: false,
+          error: 'Akaun anda telah dinyahaktifkan. Sila hubungi Pentadbir Sistem.'
+        });
+      }
+
+      // Check role verification if user selected specific checkbox
+      if (requestedRole && requestedRole !== user.role) {
+        return res.status(403).json({
+          success: false,
+          error: `Akaun ini didaftarkan sebagai "${user.role}", bukan "${requestedRole}". Sila tandakan peranan yang betul.`
+        });
+      }
+
+      const token = `jkr-ns-token-${user.role.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+
+      res.json({
+        success: true,
+        message: `Log masuk berjaya sebagai ${user.role}`,
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          role: user.role,
+          email: user.email,
+          department: user.department
+        }
+      });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err?.message });
     }
   });
 
+  // Backward compatible route: POST /api/admin/login
+  app.post('/api/admin/login', async (req: Request, res: Response) => {
+    const { username, password, role } = req.body;
+    const users = await ensureUsersStore();
+    const user = users.find(
+      (u) =>
+        u.username.toLowerCase() === String(username).toLowerCase().trim() &&
+        u.password === String(password).trim()
+    );
+
+    if (user) {
+      res.json({
+        success: true,
+        message: 'Log masuk berjaya',
+        token: 'jkr-ns-admin-session-token-2026',
+        user: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          role: user.role,
+          email: user.email,
+          department: user.department
+        }
+      });
+    } else {
+      res.status(401).json({
+        success: false,
+        error: 'Nama pengguna atau kata laluan salah.'
+      });
+    }
+  });
+
+  // ================= USER & ROLE MANAGEMENT (ADMIN ONLY) =================
+  // GET /api/users - List all users
+  app.get('/api/users', async (req: Request, res: Response) => {
+    try {
+      const users = await ensureUsersStore();
+      // Remove passwords from returned objects
+      const sanitized = users.map(({ password, ...rest }) => rest);
+      res.json({ success: true, data: sanitized });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // POST /api/users - Create new user (Admin / Penyelaras Iklan)
+  app.post('/api/users', async (req: Request, res: Response) => {
+    try {
+      const { username, password, name, role, email, department } = req.body;
+
+      if (!username || !password || !name || !role) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nama, username, kata laluan dan peranan (role) mesti diisi.'
+        });
+      }
+
+      const users = await ensureUsersStore();
+      const exists = users.find((u) => u.username.toLowerCase() === String(username).toLowerCase().trim());
+      if (exists) {
+        return res.status(400).json({
+          success: false,
+          error: `Nama pengguna "${username}" telah digunakan.`
+        });
+      }
+
+      const newUser: UserRecord = {
+        id: `user-${Date.now()}`,
+        username: String(username).trim().toLowerCase(),
+        password: String(password).trim(),
+        name: String(name).trim(),
+        role: role === 'Admin' ? 'Admin' : 'Penyelaras Iklan',
+        email: email ? String(email).trim() : `${username}@jkr.gov.my`,
+        department: department ? String(department).trim() : 'Jabatan Kerja Raya Negeri Sembilan',
+        status: 'Aktif',
+        createdAt: new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })
+      };
+
+      users.push(newUser);
+      await writeUsersStore(users);
+
+      const { password: _, ...sanitized } = newUser;
+      res.status(201).json({
+        success: true,
+        message: `Pengguna baharu "${newUser.name}" dengan peranan "${newUser.role}" telah didaftarkan.`,
+        data: sanitized
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // PUT /api/users/:id - Edit user & role
+  app.put('/api/users/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { name, role, email, department, status, password } = req.body;
+      const users = await ensureUsersStore();
+
+      const idx = users.findIndex((u) => u.id === id);
+      if (idx === -1) {
+        return res.status(404).json({ success: false, error: 'Pengguna tidak ditemui.' });
+      }
+
+      if (name) users[idx].name = String(name).trim();
+      if (role && (role === 'Admin' || role === 'Penyelaras Iklan')) {
+        users[idx].role = role;
+      }
+      if (email) users[idx].email = String(email).trim();
+      if (department) users[idx].department = String(department).trim();
+      if (status && (status === 'Aktif' || status === 'Tidak Aktif')) {
+        users[idx].status = status;
+      }
+      if (password && String(password).trim()) {
+        users[idx].password = String(password).trim();
+      }
+
+      await writeUsersStore(users);
+      const { password: _, ...sanitized } = users[idx];
+      res.json({
+        success: true,
+        message: `Maklumat pengguna "${sanitized.name}" telah dikemaskini.`,
+        data: sanitized
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // DELETE /api/users/:id - Delete user
+  app.delete('/api/users/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const users = await ensureUsersStore();
+
+      // Don't delete last admin
+      const target = users.find((u) => u.id === id);
+      if (!target) {
+        return res.status(404).json({ success: false, error: 'Pengguna tidak ditemui.' });
+      }
+
+      if (target.username === 'admin') {
+        const adminCount = users.filter((u) => u.role === 'Admin').length;
+        if (adminCount <= 1) {
+          return res.status(400).json({
+            success: false,
+            error: 'Tidak boleh memadamkan akaun pentadbir utama tunggal.'
+          });
+        }
+      }
+
+      const updated = users.filter((u) => u.id !== id);
+      await writeUsersStore(updated);
+      res.json({ success: true, message: `Pengguna "${target.name}" telah dipadamkan.` });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // ================= TENDER & ADVERTISEMENT MODULE =================
+  // GET /api/tenders - List tenders (public vs all)
+  app.get('/api/tenders', async (req: Request, res: Response) => {
+    try {
+      const tenders = await ensureTendersStore();
+      const showAll = req.query.all === 'true';
+
+      if (showAll) {
+        return res.json({ success: true, data: tenders });
+      }
+
+      // Public only gets approved tenders
+      const publicTenders = tenders.filter(
+        (t) => t.status === 'buka' || t.status === 'tutup' || t.status === 'keputusan'
+      );
+      res.json({ success: true, data: publicTenders });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // POST /api/tenders - Penyelaras Iklan register new tender/quotation
+  app.post('/api/tenders', async (req: Request, res: Response) => {
+    try {
+      const {
+        code,
+        title,
+        titleEn,
+        category,
+        district,
+        closingDate,
+        openingDate,
+        cidb,
+        estimatedCost,
+        docPrice,
+        siteVisit,
+        description,
+        createdBy,
+        createdByName
+      } = req.body;
+
+      if (!code || !title || !district || !closingDate || !cidb) {
+        return res.status(400).json({
+          success: false,
+          error: 'No. Rujukan Tender, Tajuk, Daerah, Tarikh Tutup dan Gred CIDB wajib diisi.'
+        });
+      }
+
+      const tenders = await ensureTendersStore();
+      const newTender: TenderRecord = {
+        id: `t-${Date.now()}`,
+        code: String(code).trim(),
+        title: String(title).trim(),
+        titleEn: titleEn ? String(titleEn).trim() : undefined,
+        category: category ? String(category).trim() : 'Kerja Awam & Infrastruktur',
+        district: String(district).trim(),
+        closingDate: String(closingDate).trim(),
+        openingDate: openingDate ? String(openingDate).trim() : new Date().toLocaleDateString('ms-MY'),
+        cidb: String(cidb).trim(),
+        estimatedCost: estimatedCost ? String(estimatedCost).trim() : undefined,
+        docPrice: docPrice ? String(docPrice).trim() : 'Percuma / Dimuat Turun',
+        siteVisit: siteVisit ? String(siteVisit).trim() : 'Tiada Lawatan Tapak',
+        description: description ? String(description).trim() : undefined,
+        // Status sentiasa 'menunggu_kelulusan' supaya Admin semak dahulu
+        status: 'menunggu_kelulusan',
+        statusLabelMs: 'Menunggu Kelulusan Admin',
+        createdBy: createdBy || 'penyelaras',
+        createdByName: createdByName || 'Penyelaras Iklan JKR NS',
+        createdAt: new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })
+      };
+
+      tenders.unshift(newTender);
+      await writeTendersStore(tenders);
+
+      res.status(201).json({
+        success: true,
+        message: 'Iklan tender baharu telah dihantar dan sedang menunggu semakan & kelulusan Admin.',
+        data: newTender
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // PATCH /api/tenders/:id/status - Admin reviews and updates tender status
+  app.patch('/api/tenders/:id/status', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { status, reviewRemarks, reviewedBy, winner } = req.body;
+
+      const validStatuses = ['menunggu_kelulusan', 'buka', 'tutup', 'keputusan', 'ditolak'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ success: false, error: 'Status iklan tender tidak sah.' });
+      }
+
+      const tenders = await ensureTendersStore();
+      const idx = tenders.findIndex((t) => t.id === id);
+      if (idx === -1) {
+        return res.status(404).json({ success: false, error: 'Iklan tender tidak dijumpai.' });
+      }
+
+      tenders[idx].status = status as any;
+      if (status === 'buka') tenders[idx].statusLabelMs = 'Sedang Dibuka';
+      if (status === 'tutup') tenders[idx].statusLabelMs = 'Telah Ditutup (Penilaian)';
+      if (status === 'keputusan') tenders[idx].statusLabelMs = 'Keputusan Rasmi';
+      if (status === 'ditolak') tenders[idx].statusLabelMs = 'Ditolak / Pindaan Diperlukan';
+      if (status === 'menunggu_kelulusan') tenders[idx].statusLabelMs = 'Menunggu Kelulusan Admin';
+
+      if (reviewRemarks !== undefined) tenders[idx].reviewRemarks = String(reviewRemarks);
+      if (reviewedBy) tenders[idx].reviewedBy = String(reviewedBy);
+      if (winner) tenders[idx].winner = String(winner);
+      tenders[idx].reviewedAt = new Date().toLocaleDateString('ms-MY', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      await writeTendersStore(tenders);
+
+      res.json({
+        success: true,
+        message: `Status iklan ${tenders[idx].code} telah ditukar kepada "${tenders[idx].statusLabelMs}".`,
+        data: tenders[idx]
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // DELETE /api/tenders/:id - Admin / Penyelaras delete tender
+  app.delete('/api/tenders/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const tenders = await ensureTendersStore();
+      const target = tenders.find((t) => t.id === id);
+      if (!target) {
+        return res.status(404).json({ success: false, error: 'Iklan tender tidak dijumpai.' });
+      }
+
+      const updated = tenders.filter((t) => t.id !== id);
+      await writeTendersStore(updated);
+      res.json({ success: true, message: `Iklan ${target.code} telah dipadamkan.` });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // ================= E-ADUAN MODULE ENDPOINTS =================
   // GET /api/aduan - List all complaints
   app.get('/api/aduan', async (req: Request, res: Response) => {
     try {
@@ -501,6 +1033,22 @@ async function startServer() {
       await persistToCloudflare(records[idx]);
 
       res.json({ success: true, message: 'Status tiket dikemaskini', record: records[idx] });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // DELETE /api/aduan/:id - Delete complaint
+  app.delete('/api/aduan/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const records = await ensureDataStore();
+      const updated = records.filter((r) => r.id.toUpperCase() !== id.toUpperCase());
+      if (updated.length === records.length) {
+        return res.status(404).json({ success: false, error: 'Aduan tidak dijumpai' });
+      }
+      await writeDataStore(updated);
+      res.json({ success: true, message: `Aduan ${id} telah berjaya dipadamkan.` });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err?.message });
     }

@@ -8,8 +8,9 @@ import {
   JataNegeriSembilan,
   JkrLogo
 } from './components/Logos';
-import { AdminLoginModal } from './components/AdminLoginModal';
+import { AdminLoginModal, AuthUser } from './components/AdminLoginModal';
 import { AdminPortal } from './components/AdminPortal';
+import { PenyelarasPortal, TenderRecord } from './components/PenyelarasPortal';
 
 interface TenderItem {
   id: string;
@@ -259,16 +260,33 @@ export default function App() {
     content: ''
   });
 
-  // Admin Module State
+  // User Authentication & Roles ('Admin' | 'Penyelaras Iklan')
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('jkr_admin_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
-    return localStorage.getItem('jkr_admin_token') === 'jkr-ns-admin-session-token-2026';
+    return !!localStorage.getItem('jkr_admin_token');
   });
   const [showAdminLoginModal, setShowAdminLoginModal] = useState<boolean>(false);
   const [showAdminPortal, setShowAdminPortal] = useState<boolean>(false);
+  const [showPenyelarasPortal, setShowPenyelarasPortal] = useState<boolean>(false);
+  const [liveTenders, setLiveTenders] = useState<TenderRecord[]>([]);
 
-  const handleAdminLoginSuccess = () => {
+  const handleAdminLoginSuccess = (user: AuthUser) => {
+    setCurrentUser(user);
     setIsAdminLoggedIn(true);
-    setShowAdminPortal(true);
+    if (user.role === 'Admin') {
+      setShowAdminPortal(true);
+      setShowPenyelarasPortal(false);
+    } else if (user.role === 'Penyelaras Iklan') {
+      setShowPenyelarasPortal(true);
+      setShowAdminPortal(false);
+    }
     refreshBackendData();
   };
 
@@ -276,7 +294,32 @@ export default function App() {
     localStorage.removeItem('jkr_admin_token');
     localStorage.removeItem('jkr_admin_user');
     setIsAdminLoggedIn(false);
+    setCurrentUser(null);
     setShowAdminPortal(false);
+    setShowPenyelarasPortal(false);
+  };
+
+  const handleRegisterTender = async (data: Partial<TenderRecord>): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/tenders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          createdBy: currentUser?.username || 'penyelaras',
+          createdByName: currentUser?.name || 'Penyelaras Iklan JKR'
+        })
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        await refreshBackendData();
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Failed to register tender:', err);
+      return false;
+    }
   };
 
   const handleDeleteComplaint = async (id: string) => {
@@ -292,12 +335,13 @@ export default function App() {
     }
   };
 
-  // Fetch complaints and Cloudflare connection status from backend
+  // Fetch complaints, Cloudflare connection status, and tenders from backend
   const refreshBackendData = async () => {
     try {
-      const [cfRes, aduanRes] = await Promise.all([
+      const [cfRes, aduanRes, tendersRes] = await Promise.all([
         fetch('/api/cloudflare/status').then((r) => r.json()).catch(() => null),
-        fetch('/api/aduan').then((r) => r.json()).catch(() => null)
+        fetch('/api/aduan').then((r) => r.json()).catch(() => null),
+        fetch('/api/tenders').then((r) => r.json()).catch(() => null)
       ]);
 
       if (cfRes) {
@@ -312,6 +356,10 @@ export default function App() {
 
       if (aduanRes && aduanRes.success && Array.isArray(aduanRes.data)) {
         setSubmittedComplaints(aduanRes.data);
+      }
+
+      if (tendersRes && tendersRes.success && Array.isArray(tendersRes.data)) {
+        setLiveTenders(tendersRes.data);
       }
     } catch (err) {
       console.warn('Backend connection fallback:', err);
@@ -533,8 +581,13 @@ export default function App() {
     }
   };
 
+  // Publicly visible approved tenders (only 'buka', 'tutup', 'keputusan')
+  const activePublicTenders: TenderRecord[] = (liveTenders.length > 0 ? liveTenders : (TENDERS_DATA as any[])).filter(
+    (t: any) => ['buka', 'tutup', 'keputusan'].includes(t.status)
+  );
+
   // Filter tenders based on filter and live search query
-  const filteredTenders = TENDERS_DATA.filter((item) => {
+  const filteredTenders = activePublicTenders.filter((item) => {
     const matchesFilter = tenderFilter === 'semua' || item.status === tenderFilter;
     if (!matchesFilter) return false;
     if (!searchQuery.trim()) return true;
@@ -542,7 +595,7 @@ export default function App() {
     const q = searchQuery.toLowerCase();
     return (
       item.title.toLowerCase().includes(q) ||
-      item.titleEn.toLowerCase().includes(q) ||
+      (item.titleEn && item.titleEn.toLowerCase().includes(q)) ||
       item.code.toLowerCase().includes(q) ||
       item.district.toLowerCase().includes(q) ||
       item.cidb.toLowerCase().includes(q)
@@ -561,10 +614,10 @@ export default function App() {
       return;
     }
 
-    const matchedTenders = TENDERS_DATA.filter(
+    const matchedTenders = activePublicTenders.filter(
       (t) =>
         t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.titleEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (t.titleEn && t.titleEn.toLowerCase().includes(searchQuery.toLowerCase())) ||
         t.district.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.code.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -654,7 +707,22 @@ export default function App() {
   const currentDistrict = DISTRICTS_DATA[selectedDistrict] || DISTRICTS_DATA.seremban;
 
   // Render Admin Portal if activated by logged-in admin
-  if (showAdminPortal && isAdminLoggedIn) {
+  // Render Penyelaras Portal if activated by Penyelaras Iklan
+  if (showPenyelarasPortal && currentUser && currentUser.role === 'Penyelaras Iklan') {
+    return (
+      <PenyelarasPortal
+        currentUser={currentUser}
+        tenders={liveTenders}
+        onClose={() => setShowPenyelarasPortal(false)}
+        onLogout={handleAdminLogout}
+        onRegisterTender={handleRegisterTender}
+        onRefresh={refreshBackendData}
+      />
+    );
+  }
+
+  // Render Admin Portal if activated by logged-in admin
+  if (showAdminPortal && currentUser && currentUser.role === 'Admin') {
     return (
       <AdminPortal
         complaints={submittedComplaints}
@@ -752,23 +820,29 @@ export default function App() {
                 <span className="font-bold">{lang}</span>
               </button>
 
-              {/* Butang Akses Pentadbir (Admin) */}
-              {isAdminLoggedIn ? (
+              {/* Butang Akses Pentadbir & Penyelaras Iklan */}
+              {currentUser ? (
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={() => setShowAdminPortal(true)}
+                    onClick={() => {
+                      if (currentUser.role === 'Admin') {
+                        setShowAdminPortal(true);
+                      } else {
+                        setShowPenyelarasPortal(true);
+                      }
+                    }}
                     className="flex items-center gap-1.5 bg-[#FFD100] text-slate-900 px-2.5 py-1 rounded-lg font-bold text-xs hover:bg-yellow-400 transition-all shadow-xs cursor-pointer"
-                    title="Buka Papan Pemuka Pentadbir"
+                    title={currentUser.role === 'Admin' ? 'Buka Papan Pemuka Pentadbir' : 'Buka Portal Penyelaras Iklan'}
                   >
-                    <i className="fa-solid fa-shield-halved text-xs text-[#DC2626]"></i>
-                    <span>Portal Admin</span>
+                    <i className={`fa-solid ${currentUser.role === 'Admin' ? 'fa-shield-halved' : 'fa-bullhorn'} text-xs text-[#DC2626]`}></i>
+                    <span>{currentUser.role === 'Admin' ? 'Portal Admin' : 'Portal Penyelaras'}</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleAdminLogout}
                     className="px-2 py-1 bg-red-900/50 hover:bg-red-700 text-red-200 rounded-lg text-xs transition-colors cursor-pointer"
-                    title="Log Keluar Pentadbir"
+                    title="Log Keluar"
                   >
                     <i className="fa-solid fa-power-off"></i>
                   </button>
@@ -778,10 +852,10 @@ export default function App() {
                   type="button"
                   onClick={() => setShowAdminLoginModal(true)}
                   className="flex items-center gap-1.5 bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-[#FFD100] px-2.5 py-1 rounded-lg border border-slate-700 transition-colors font-semibold text-xs cursor-pointer"
-                  title="Log Masuk Pentadbir JKR"
+                  title="Log Masuk Staf & Pentadbir JKR"
                 >
                   <i className="fa-solid fa-lock text-xs text-[#FFD100]"></i>
-                  <span>Log Masuk Admin</span>
+                  <span>Log Masuk Staf</span>
                 </button>
               )}
             </div>
@@ -844,21 +918,26 @@ export default function App() {
                 <span>e-Aduan</span>
               </a>
 
-              {/* Butang Terus Portal Pentadbir */}
+              {/* Butang Terus Portal Pentadbir / Penyelaras */}
               <button
                 type="button"
                 onClick={() => {
-                  if (isAdminLoggedIn) {
-                    setShowAdminPortal(true);
+                  if (currentUser) {
+                    if (currentUser.role === 'Admin') setShowAdminPortal(true);
+                    else setShowPenyelarasPortal(true);
                   } else {
                     setShowAdminLoginModal(true);
                   }
                 }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-300 hover:border-slate-800 text-slate-800 hover:bg-slate-100 transition-all cursor-pointer"
-                title="Pusat Kawalan Pentadbir"
+                title="Pusat Pengurusan Pegawai JKR"
               >
-                <i className="fa-solid fa-user-shield text-[#DC2626]"></i>
-                <span>{isAdminLoggedIn ? 'Modul Admin' : 'Log Masuk Admin'}</span>
+                <i className={`fa-solid ${currentUser?.role === 'Penyelaras Iklan' ? 'fa-bullhorn' : 'fa-user-shield'} text-[#DC2626]`}></i>
+                <span>
+                  {currentUser
+                    ? (currentUser.role === 'Admin' ? 'Modul Admin' : 'Modul Penyelaras')
+                    : 'Modul Staf'}
+                </span>
               </button>
             </nav>
 
@@ -918,6 +997,22 @@ export default function App() {
               >
                 {lang === 'BM' ? 'e-Aduan Kerosakan' : 'Damage e-Complaint'}
               </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  if (currentUser) {
+                    if (currentUser.role === 'Admin') setShowAdminPortal(true);
+                    else setShowPenyelarasPortal(true);
+                  } else {
+                    setShowAdminLoginModal(true);
+                  }
+                }}
+                className="w-full text-left py-2 px-3 rounded-lg bg-slate-900 text-white font-bold flex items-center justify-between"
+              >
+                <span>{currentUser ? `Portal ${currentUser.role}` : 'Log Masuk Staf / Admin'}</span>
+                <i className="fa-solid fa-arrow-right text-xs text-[#FFD100]"></i>
+              </button>
             </div>
           )}
         </div>
@@ -1521,7 +1616,7 @@ export default function App() {
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              {lang === 'BM' ? 'Semua (4)' : 'All (4)'}
+              {lang === 'BM' ? `Semua (${activePublicTenders.length})` : `All (${activePublicTenders.length})`}
             </button>
             <button
               type="button"
@@ -1532,7 +1627,9 @@ export default function App() {
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              {lang === 'BM' ? 'Dibuka (2)' : 'Open (2)'}
+              {lang === 'BM'
+                ? `Dibuka (${activePublicTenders.filter((t) => t.status === 'buka').length})`
+                : `Open (${activePublicTenders.filter((t) => t.status === 'buka').length})`}
             </button>
             <button
               type="button"
@@ -1543,7 +1640,9 @@ export default function App() {
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              {lang === 'BM' ? 'Tutup (1)' : 'Closed (1)'}
+              {lang === 'BM'
+                ? `Tutup (${activePublicTenders.filter((t) => t.status === 'tutup').length})`
+                : `Closed (${activePublicTenders.filter((t) => t.status === 'tutup').length})`}
             </button>
             <button
               type="button"
@@ -1554,7 +1653,9 @@ export default function App() {
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              {lang === 'BM' ? 'Keputusan (1)' : 'Awarded (1)'}
+              {lang === 'BM'
+                ? `Keputusan (${activePublicTenders.filter((t) => t.status === 'keputusan').length})`
+                : `Awarded (${activePublicTenders.filter((t) => t.status === 'keputusan').length})`}
             </button>
           </div>
         </div>
@@ -1587,7 +1688,7 @@ export default function App() {
                           : 'bg-blue-100 text-blue-800'
                       }`}
                     >
-                      {lang === 'BM' ? item.statusLabelMs : item.statusLabelEn}
+                      {lang === 'BM' ? (item.statusLabelMs || 'Sedang Dibuka') : (item.statusLabelEn || (item.status === 'buka' ? 'Open' : item.status === 'tutup' ? 'Closed' : 'Awarded'))}
                     </span>
                     <span className="text-xs font-mono text-slate-500">{item.code}</span>
                   </div>
@@ -2066,22 +2167,23 @@ export default function App() {
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="text-xs text-slate-600 space-y-0.5">
+                <div className="text-xs text-slate-600 space-y-1">
                   <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                    <i className="fa-solid fa-key text-amber-500"></i>
-                    <span>Log Masuk Pentadbir JKR (Admin):</span>
+                    <i className="fa-solid fa-user-lock text-amber-500"></i>
+                    <span>Portal Kakitangan &amp; Pegawai JKR:</span>
                   </div>
-                  <div className="text-[11px] text-slate-500 font-mono">
-                    Username: <span className="font-bold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200">admin</span> &nbsp;|&nbsp; 
-                    Password: <span className="font-bold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-200">123</span>
+                  <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Akses berasingan mengikut peranan rasmi: Pentadbir Sistem (Admin) &amp; Penyelaras Iklan Tender.</span>
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => {
-                    if (isAdminLoggedIn) {
-                      setShowAdminPortal(true);
+                    if (currentUser) {
+                      if (currentUser.role === 'Admin') setShowAdminPortal(true);
+                      else setShowPenyelarasPortal(true);
                     } else {
                       setShowAdminLoginModal(true);
                     }
@@ -2089,7 +2191,11 @@ export default function App() {
                   className="w-full sm:w-auto px-5 py-2.5 bg-[#111827] hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer whitespace-nowrap"
                 >
                   <i className="fa-solid fa-right-to-bracket text-[#FFD100]"></i>
-                  <span>{isAdminLoggedIn ? 'Buka Modul Pentadbir (Aktif)' : 'Log Masuk Pentadbir'}</span>
+                  <span>
+                    {currentUser
+                      ? `Buka Portal (${currentUser.role})`
+                      : 'Log Masuk Pentadbir / Penyelaras'}
+                  </span>
                 </button>
               </div>
 

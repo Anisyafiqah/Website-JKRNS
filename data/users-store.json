@@ -1,0 +1,24 @@
+[
+  {
+    "id": "user-admin-1",
+    "username": "admin",
+    "password": "123",
+    "name": "Pentadbir Utama JKR NS",
+    "role": "Admin",
+    "email": "admin.jkr@ns.gov.my",
+    "department": "Bahagian Pentadbiran & Integriti JKR NS",
+    "status": "Aktif",
+    "createdAt": "01 Nov 2026"
+  },
+  {
+    "id": "user-penyelaras-1",
+    "username": "penyelaras",
+    "password": "123",
+    "name": "Penyelaras Perolehan & Tender JKR",
+    "role": "Penyelaras Iklan",
+    "email": "penyelaras.tender@ns.gov.my",
+    "department": "Unit Perolehan & Kontrak JKR NS",
+    "status": "Aktif",
+    "createdAt": "01 Nov 2026"
+  }
+]
