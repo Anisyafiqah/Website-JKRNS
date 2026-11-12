@@ -4,21 +4,24 @@
  */
 
 import React, { useState } from 'react';
+import { CMSContent } from '../data/defaultCmsContent';
 
 interface PusatMuatTurunProps {
   lang: 'BM' | 'EN';
   onOpenModal: (title: string, content: string) => void;
+  cmsDownloads?: CMSContent['downloads'];
 }
 
 interface DownloadItem {
   id: string;
-  category: 'borang' | 'pekeliling' | 'panduan';
+  category: 'borang' | 'pekeliling' | 'panduan' | 'arkib';
   title: string;
   titleEn: string;
-  format: 'PDF' | 'DOCX';
+  format: string;
   fileSize: string;
   refNo: string;
   description: string;
+  fileUrl?: string;
 }
 
 const DOWNLOAD_ITEMS: DownloadItem[] = [
@@ -84,10 +87,35 @@ const DOWNLOAD_ITEMS: DownloadItem[] = [
   }
 ];
 
-export const PusatMuatTurun: React.FC<PusatMuatTurunProps> = ({ lang, onOpenModal }) => {
+export const PusatMuatTurun: React.FC<PusatMuatTurunProps> = ({ lang, onOpenModal, cmsDownloads }) => {
   const [activeCategory, setActiveCategory] = useState<'semua' | 'borang' | 'pekeliling' | 'panduan'>('semua');
 
-  const filtered = DOWNLOAD_ITEMS.filter((item) => {
+  // Convert CMS downloads to unified items
+  const effectiveItems: DownloadItem[] = React.useMemo(() => {
+    if (cmsDownloads && cmsDownloads.length > 0) {
+      return cmsDownloads.map((d) => {
+        let cat: 'borang' | 'pekeliling' | 'panduan' | 'arkib' = 'borang';
+        if (d.category.includes('Pekeliling')) cat = 'pekeliling';
+        else if (d.category.includes('Panduan')) cat = 'panduan';
+        else if (d.category.includes('Arkib')) cat = 'arkib';
+
+        return {
+          id: d.id,
+          category: cat,
+          title: d.title,
+          titleEn: d.title,
+          format: d.format || 'PDF',
+          fileSize: d.fileSize || '1.0 MB',
+          refNo: d.updateDate || 'JKR/NS/DOC',
+          description: `Kategori: ${d.category} • Dikemaskini: ${d.updateDate}`,
+          fileUrl: d.fileUrl
+        };
+      });
+    }
+    return DOWNLOAD_ITEMS;
+  }, [cmsDownloads]);
+
+  const filtered = effectiveItems.filter((item) => {
     if (activeCategory === 'semua') return true;
     return item.category === activeCategory;
   });
@@ -167,19 +195,30 @@ export const PusatMuatTurun: React.FC<PusatMuatTurunProps> = ({ lang, onOpenModa
             </div>
 
             <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() =>
-                  onOpenModal(
-                    `Muat Turun: ${item.title}`,
-                    `Dokumen: ${item.title}\nNombor Rujukan: ${item.refNo}\nFormat: ${item.format} (${item.fileSize})\n\nPautan muat turun rasmi sedia dimuat turun. Fail disemak bebas daripada perisian hasad melalui gerbang keselamatan ICT JKR NS.`
-                  )
-                }
-                className="w-full py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-              >
-                <i className="fa-solid fa-cloud-arrow-down text-[#FFD100]"></i>
-                <span>{lang === 'BM' ? 'Muat Turun Dokumen' : 'Download Document'}</span>
-              </button>
+              {item.fileUrl ? (
+                <a
+                  href={item.fileUrl}
+                  download={item.title}
+                  className="w-full py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs text-center"
+                >
+                  <i className="fa-solid fa-cloud-arrow-down text-[#FFD100]"></i>
+                  <span>{lang === 'BM' ? 'Muat Turun Fail' : 'Download File'}</span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenModal(
+                      `Muat Turun: ${item.title}`,
+                      `Dokumen: ${item.title}\nNombor Rujukan: ${item.refNo}\nFormat: ${item.format} (${item.fileSize})\n\nPautan muat turun rasmi sedia dimuat turun. Fail disemak bebas daripada perisian hasad melalui gerbang keselamatan ICT JKR NS.`
+                    )
+                  }
+                  className="w-full py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                >
+                  <i className="fa-solid fa-cloud-arrow-down text-[#FFD100]"></i>
+                  <span>{lang === 'BM' ? 'Muat Turun Dokumen' : 'Download Document'}</span>
+                </button>
+              )}
             </div>
           </div>
         ))}

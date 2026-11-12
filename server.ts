@@ -15,6 +15,17 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+import { defaultCmsContent, CMSContent } from './src/data/defaultCmsContent';
+
+export interface CMSAuditEntry {
+  id: string;
+  action: string;
+  section: string;
+  user: string;
+  timestamp: string;
+  details?: string;
+}
+
 // ================= DATA STRUCTURES =================
 export interface AduanRecord {
   id: string;
@@ -36,7 +47,7 @@ export interface UserRecord {
   username: string;
   password: string;
   name: string;
-  role: 'Admin' | 'Penyelaras Iklan';
+  role: 'Admin' | 'Penyelaras Iklan' | 'Super Administrator' | 'Administrator';
   email: string;
   department: string;
   status: 'Aktif' | 'Tidak Aktif';
@@ -74,6 +85,74 @@ const DATA_DIR = path.resolve(__dirname, 'data');
 const ADUAN_FILE = path.resolve(DATA_DIR, 'aduan-store.json');
 const USERS_FILE = path.resolve(DATA_DIR, 'users-store.json');
 const TENDERS_FILE = path.resolve(DATA_DIR, 'tenders-store.json');
+const CMS_CONTENT_FILE = path.resolve(DATA_DIR, 'cms-content.json');
+const CMS_AUDIT_FILE = path.resolve(DATA_DIR, 'cms-audit.json');
+const MEDIA_DIR = path.resolve(DATA_DIR, 'media');
+
+// --- 4. CMS Store ---
+async function ensureCmsStore(): Promise<CMSContent> {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      await fsPromises.mkdir(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(MEDIA_DIR)) {
+      await fsPromises.mkdir(MEDIA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(CMS_CONTENT_FILE)) {
+      await fsPromises.writeFile(CMS_CONTENT_FILE, JSON.stringify(defaultCmsContent, null, 2), 'utf-8');
+      return defaultCmsContent;
+    }
+    const raw = await fsPromises.readFile(CMS_CONTENT_FILE, 'utf-8');
+    const parsed = JSON.parse(raw);
+    return { ...defaultCmsContent, ...parsed };
+  } catch (err) {
+    console.error('[CMS Storage Error] Reading CMS store failed:', err);
+    return defaultCmsContent;
+  }
+}
+
+async function writeCmsStore(data: CMSContent): Promise<void> {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      await fsPromises.mkdir(DATA_DIR, { recursive: true });
+    }
+    await fsPromises.writeFile(CMS_CONTENT_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('[CMS Storage Error] Writing CMS store failed:', err);
+  }
+}
+
+async function logCmsAudit(action: string, section: string, user: string, details?: string): Promise<void> {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      await fsPromises.mkdir(DATA_DIR, { recursive: true });
+    }
+    let entries: CMSAuditEntry[] = [];
+    if (fs.existsSync(CMS_AUDIT_FILE)) {
+      const raw = await fsPromises.readFile(CMS_AUDIT_FILE, 'utf-8');
+      entries = JSON.parse(raw);
+    }
+    const newEntry: CMSAuditEntry = {
+      id: `audit-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      action,
+      section,
+      user,
+      details,
+      timestamp: new Date().toLocaleDateString('ms-MY', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    };
+    entries.unshift(newEntry);
+    if (entries.length > 100) entries = entries.slice(0, 100);
+    await fsPromises.writeFile(CMS_AUDIT_FILE, JSON.stringify(entries, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('[CMS Audit Error]', err);
+  }
+}
 
 // --- 1. Aduan Store ---
 async function ensureDataStore(): Promise<AduanRecord[]> {
@@ -498,6 +577,10 @@ async function startServer() {
   await ensureDataStore();
   await ensureUsersStore();
   await ensureTendersStore();
+  await ensureCmsStore();
+
+  // Static directory for uploaded media files
+  app.use('/api/cms/media/files', express.static(MEDIA_DIR));
 
   // API Status & Health
   app.get('/api/health', (req: Request, res: Response) => {
@@ -1175,6 +1258,590 @@ async function startServer() {
       }
       await writeDataStore(updated);
       res.json({ success: true, message: `Aduan ${id} telah berjaya dipadamkan.` });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // ================= CONTENT MANAGEMENT SYSTEM (CMS) ENDPOINTS =================
+  
+  // 1. GET /api/cms/content - Fetch full CMS content
+  app.get('/api/cms/content', async (req: Request, res: Response) => {
+    try {
+      const content = await ensureCmsStore();
+      const mode = req.query.mode as string | undefined;
+
+      // If public mode, filter out drafts from sliders if requested
+      if (mode === 'public') {
+        const publicHeroSlides = (content.homeHeroSlides || []).filter((s) => s.status !== 'draft');
+        const publicGateways = (content.homeGateways || []).filter((g) => g.status !== 'draft');
+        return res.json({
+          success: true,
+          data: {
+            ...content,
+            homeHeroSlides: publicHeroSlides.length > 0 ? publicHeroSlides : content.homeHeroSlides,
+            homeGateways: publicGateways.length > 0 ? publicGateways : content.homeGateways
+          }
+        });
+      }
+
+      res.json({ success: true, data: content });
+    } catch (err: any) {
+      console.error('[GET /api/cms/content Error]', err);
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 2. PUT /api/cms/content - Full content update
+  app.put('/api/cms/content', async (req: Request, res: Response) => {
+    try {
+      const incoming = req.body.content || req.body;
+      const user = req.body.user || 'Pentadbir CMS';
+
+      if (!incoming || typeof incoming !== 'object') {
+        return res.status(400).json({ success: false, error: 'Data kandungan tidak sah.' });
+      }
+
+      const current = await ensureCmsStore();
+      const merged = { ...current, ...incoming };
+      await writeCmsStore(merged);
+      await logCmsAudit('Kemaskini Penuh', 'Semua Bahagian', user, 'Mengemaskini pangkalan data kandungan CMS portal');
+
+      res.json({
+        success: true,
+        message: 'Kandungan portal telah berjaya dikemaskini dan disimpan.',
+        data: merged
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 3. PUT /api/cms/content/:sectionKey - Update specific section (e.g. siteConfig, homeHeroSlides, etc.)
+  app.put('/api/cms/content/:sectionKey', async (req: Request, res: Response) => {
+    try {
+      const { sectionKey } = req.params;
+      const sectionData = req.body.data !== undefined ? req.body.data : req.body;
+      const user = req.body.user || 'Pentadbir CMS';
+
+      const current = await ensureCmsStore();
+      if (!(sectionKey in current)) {
+        return res.status(400).json({
+          success: false,
+          error: `Bahagian "${sectionKey}" tidak ditemui dalam skema CMS.`
+        });
+      }
+
+      (current as any)[sectionKey] = sectionData;
+      await writeCmsStore(current);
+      await logCmsAudit('Kemaskini Bahagian', sectionKey, user, `Menyimpan perubahan untuk seksyen ${sectionKey}`);
+
+      res.json({
+        success: true,
+        message: `Bahagian "${sectionKey}" telah berjaya dikemaskini.`,
+        data: (current as any)[sectionKey]
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 4. POST /api/cms/content/:sectionKey/items - Add item to list section
+  app.post('/api/cms/content/:sectionKey/items', async (req: Request, res: Response) => {
+    try {
+      const { sectionKey } = req.params;
+      const { item, user = 'Pentadbir CMS', subPath } = req.body;
+
+      if (!item) {
+        return res.status(400).json({ success: false, error: 'Item data diperlukan.' });
+      }
+
+      const current = await ensureCmsStore();
+      const newItem = {
+        id: item.id || `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        ...item
+      };
+
+      if (subPath && (current as any)[sectionKey]?.[subPath] && Array.isArray((current as any)[sectionKey][subPath])) {
+        (current as any)[sectionKey][subPath].push(newItem);
+      } else if (Array.isArray((current as any)[sectionKey])) {
+        (current as any)[sectionKey].push(newItem);
+      } else {
+        return res.status(400).json({ success: false, error: `Bahagian "${sectionKey}" bukan senarai array.` });
+      }
+
+      await writeCmsStore(current);
+      await logCmsAudit('Tambah Item', `${sectionKey}${subPath ? '.' + subPath : ''}`, user, `Menambah item baharu: ${newItem.title || newItem.name || newItem.id}`);
+
+      res.status(201).json({
+        success: true,
+        message: 'Item baharu berjaya ditambah.',
+        data: newItem
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 5. PUT /api/cms/content/:sectionKey/items/:itemId - Update item in list section
+  app.put('/api/cms/content/:sectionKey/items/:itemId', async (req: Request, res: Response) => {
+    try {
+      const { sectionKey, itemId } = req.params;
+      const { item, user = 'Pentadbir CMS', subPath } = req.body;
+
+      const current = await ensureCmsStore();
+      let targetArray: any[] | null = null;
+
+      if (subPath && (current as any)[sectionKey]?.[subPath] && Array.isArray((current as any)[sectionKey][subPath])) {
+        targetArray = (current as any)[sectionKey][subPath];
+      } else if (Array.isArray((current as any)[sectionKey])) {
+        targetArray = (current as any)[sectionKey];
+      }
+
+      if (!targetArray) {
+        return res.status(400).json({ success: false, error: `Bahagian "${sectionKey}" bukan senarai array.` });
+      }
+
+      const idx = targetArray.findIndex((el) => String(el.id) === String(itemId));
+      if (idx === -1) {
+        return res.status(404).json({ success: false, error: `Item ${itemId} tidak ditemui.` });
+      }
+
+      targetArray[idx] = { ...targetArray[idx], ...item, id: itemId };
+      await writeCmsStore(current);
+      await logCmsAudit('Kemaskini Item', `${sectionKey}${subPath ? '.' + subPath : ''}`, user, `Mengemaskini item ID ${itemId}`);
+
+      res.json({
+        success: true,
+        message: 'Item berjaya dikemaskini.',
+        data: targetArray[idx]
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 6. DELETE /api/cms/content/:sectionKey/items/:itemId - Delete item from list section
+  app.delete('/api/cms/content/:sectionKey/items/:itemId', async (req: Request, res: Response) => {
+    try {
+      const { sectionKey, itemId } = req.params;
+      const { user = 'Pentadbir CMS', subPath } = req.body || {};
+
+      const current = await ensureCmsStore();
+      let targetArray: any[] | null = null;
+
+      if (subPath && (current as any)[sectionKey]?.[subPath] && Array.isArray((current as any)[sectionKey][subPath])) {
+        targetArray = (current as any)[sectionKey][subPath];
+      } else if (Array.isArray((current as any)[sectionKey])) {
+        targetArray = (current as any)[sectionKey];
+      }
+
+      if (!targetArray) {
+        return res.status(400).json({ success: false, error: `Bahagian "${sectionKey}" bukan senarai array.` });
+      }
+
+      const originalLength = targetArray.length;
+      const filtered = targetArray.filter((el) => String(el.id) !== String(itemId));
+
+      if (filtered.length === originalLength) {
+        return res.status(404).json({ success: false, error: `Item ${itemId} tidak ditemui.` });
+      }
+
+      if (subPath) {
+        (current as any)[sectionKey][subPath] = filtered;
+      } else {
+        (current as any)[sectionKey] = filtered;
+      }
+
+      await writeCmsStore(current);
+      await logCmsAudit('Padam Item', `${sectionKey}${subPath ? '.' + subPath : ''}`, user, `Memadam item ID ${itemId}`);
+
+      res.json({
+        success: true,
+        message: `Item ${itemId} telah berjaya dipadamkan.`
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 7. POST /api/cms/media/upload - Media file & image upload (supports base64 dataUrl)
+  app.post('/api/cms/media/upload', async (req: Request, res: Response) => {
+    try {
+      const { dataUrl, filename, mimeType, description } = req.body;
+
+      if (!dataUrl || !filename) {
+        return res.status(400).json({
+          success: false,
+          error: 'Maklumat fail tidak lengkap (dataUrl dan filename diperlukan).'
+        });
+      }
+
+      // Check if dataUrl is base64
+      const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      const safeName = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const uniqueName = `${Date.now()}_${safeName}`;
+      const filePath = path.resolve(MEDIA_DIR, uniqueName);
+
+      if (matches && matches.length === 3) {
+        const buffer = Buffer.from(matches[2], 'base64');
+        await fsPromises.writeFile(filePath, buffer);
+      } else {
+        // Raw text / svg / url
+        await fsPromises.writeFile(filePath, dataUrl, 'utf-8');
+      }
+
+      const mediaUrl = `/api/cms/media/files/${uniqueName}`;
+
+      res.status(201).json({
+        success: true,
+        message: 'Fail media berjaya dimuat naik ke storan pelayan.',
+        url: mediaUrl,
+        filename: uniqueName,
+        originalName: filename,
+        dataUrl: dataUrl.length < 500000 ? dataUrl : undefined
+      });
+    } catch (err: any) {
+      console.error('[Media Upload Error]', err);
+      res.status(500).json({ success: false, error: err?.message || 'Gagal memuat naik fail media.' });
+    }
+  });
+
+  // 8. GET /api/cms/media/list - List uploaded media files
+  app.get('/api/cms/media/list', async (req: Request, res: Response) => {
+    try {
+      if (!fs.existsSync(MEDIA_DIR)) {
+        await fsPromises.mkdir(MEDIA_DIR, { recursive: true });
+        return res.json({ success: true, files: [] });
+      }
+
+      const fileNames = await fsPromises.readdir(MEDIA_DIR);
+      const filesInfo = await Promise.all(
+        fileNames.map(async (name) => {
+          const stat = await fsPromises.stat(path.resolve(MEDIA_DIR, name));
+          return {
+            name,
+            url: `/api/cms/media/files/${name}`,
+            size: `${(stat.size / 1024).toFixed(1)} KB`,
+            updatedAt: stat.mtime.toLocaleDateString('ms-MY')
+          };
+        })
+      );
+
+      res.json({ success: true, files: filesInfo });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 9. POST /api/cms/publish - Mark changes as live/published
+  app.post('/api/cms/publish', async (req: Request, res: Response) => {
+    try {
+      const { user = 'Pentadbir CMS', notes } = req.body;
+      const current = await ensureCmsStore();
+
+      // Ensure all slides and gateways are marked published
+      if (Array.isArray(current.homeHeroSlides)) {
+        current.homeHeroSlides.forEach((s) => {
+          s.status = 'published';
+        });
+      }
+      if (Array.isArray(current.homeGateways)) {
+        current.homeGateways.forEach((g) => {
+          g.status = 'published';
+        });
+      }
+
+      await writeCmsStore(current);
+      await logCmsAudit('Penerbitan Rasmi', 'Semua Bahagian', user, notes || 'Menerbitkan semua kandungan portal ke paparan awam');
+
+      res.json({
+        success: true,
+        message: 'Semua perubahan kandungan telah diterbitkan secara langsung ke portal awam.',
+        publishedAt: new Date().toISOString(),
+        data: current
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 10. POST /api/cms/reset - Reset to factory defaults
+  app.post('/api/cms/reset', async (req: Request, res: Response) => {
+    try {
+      const { user = 'Pentadbir Utama' } = req.body;
+      await writeCmsStore(defaultCmsContent);
+      await logCmsAudit('Tetapan Semula', 'Sistem Penuh', user, 'Mengembalikan kandungan asal pratetap portal');
+
+      res.json({
+        success: true,
+        message: 'Kandungan portal telah ditetapkan semula kepada nilai asal pratetap.',
+        data: defaultCmsContent
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 11. GET /api/cms/audit - Get audit log history
+  app.get('/api/cms/audit', async (req: Request, res: Response) => {
+    try {
+      if (!fs.existsSync(CMS_AUDIT_FILE)) {
+        return res.json({ success: true, data: [] });
+      }
+      const raw = await fsPromises.readFile(CMS_AUDIT_FILE, 'utf-8');
+      const list = JSON.parse(raw);
+      res.json({ success: true, data: list });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 12. POST /api/cms/auth/login - Dedicated CMS Administrator login
+  app.post('/api/cms/auth/login', async (req: Request, res: Response) => {
+    try {
+      const { username, password } = req.body;
+      if (!username || !password) {
+        return res.status(400).json({
+          success: false,
+          error: 'Sila masukkan Nama Pengguna dan Kata Laluan Pentadbir CMS.'
+        });
+      }
+
+      const users = await ensureUsersStore();
+      const cleanUser = String(username).trim().toLowerCase();
+      const cleanPass = String(password).trim();
+
+      const user = users.find(
+        (u) => u.username.toLowerCase() === cleanUser && u.password === cleanPass
+      );
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Nama pengguna atau kata laluan tidak sah.'
+        });
+      }
+
+      if (user.status !== 'Aktif') {
+        return res.status(403).json({
+          success: false,
+          error: 'Akaun pentadbir ini telah dinyahaktifkan. Sila hubungi Pegawai Sistem.'
+        });
+      }
+
+      // Map existing roles to CMS hierarchy:
+      // 'admin' username or 'Admin' role => Super Administrator
+      // 'Administrator' => Administrator
+      // 'Penyelaras Iklan' => can edit Tenders & Content as Administrator
+      let cmsRole: 'Super Administrator' | 'Administrator' = 'Administrator';
+      if (user.username === 'admin' || user.role === 'Admin' || user.role === 'Super Administrator') {
+        cmsRole = 'Super Administrator';
+      }
+
+      const sessionToken = `cms-token-${cmsRole.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+      await logCmsAudit('Log Masuk', 'Keselamatan', user.name, `Log masuk CMS berjaya dengan peranan ${cmsRole}`);
+
+      res.json({
+        success: true,
+        message: `Log masuk CMS berjaya sebagai ${cmsRole}.`,
+        token: sessionToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          role: cmsRole,
+          rawRole: user.role,
+          email: user.email,
+          department: user.department
+        }
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 13. POST /api/cms/auth/change-password - Change current admin password
+  app.post('/api/cms/auth/change-password', async (req: Request, res: Response) => {
+    try {
+      const { username, currentPassword, newPassword } = req.body;
+      if (!username || !currentPassword || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          error: 'Sila isi kata laluan semasa dan kata laluan baharu.'
+        });
+      }
+
+      if (String(newPassword).trim().length < 3) {
+        return res.status(400).json({
+          success: false,
+          error: 'Kata laluan baharu mestilah sekurang-kurangnya 3 aksara.'
+        });
+      }
+
+      const users = await ensureUsersStore();
+      const idx = users.findIndex(
+        (u) =>
+          u.username.toLowerCase() === String(username).toLowerCase().trim() &&
+          u.password === String(currentPassword).trim()
+      );
+
+      if (idx === -1) {
+        return res.status(401).json({
+          success: false,
+          error: 'Kata laluan semasa tidak tepat.'
+        });
+      }
+
+      users[idx].password = String(newPassword).trim();
+      await writeUsersStore(users);
+      await logCmsAudit('Tukar Kata Laluan', 'Keselamatan', users[idx].name, 'Menukar kata laluan akaun pentadbir');
+
+      res.json({
+        success: true,
+        message: 'Kata laluan pentadbir telah berjaya dikemaskini.'
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 14. GET /api/cms/admins - List all CMS administrators
+  app.get('/api/cms/admins', async (req: Request, res: Response) => {
+    try {
+      const users = await ensureUsersStore();
+      const sanitized = users.map((u) => ({
+        id: u.id,
+        username: u.username,
+        name: u.name,
+        role: (u.username === 'admin' || u.role === 'Admin' || u.role === 'Super Administrator')
+          ? 'Super Administrator'
+          : 'Administrator',
+        actualRole: u.role,
+        email: u.email,
+        department: u.department,
+        status: u.status,
+        createdAt: u.createdAt
+      }));
+
+      res.json({ success: true, data: sanitized });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 15. POST /api/cms/admins - Create new CMS administrator
+  app.post('/api/cms/admins', async (req: Request, res: Response) => {
+    try {
+      const { username, password, name, role = 'Administrator', email, department } = req.body;
+
+      if (!username || !password || !name) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nama Pengguna, Kata Laluan, dan Nama Penuh wajib diisi.'
+        });
+      }
+
+      const cleanUser = String(username).trim().toLowerCase();
+      const cleanPass = String(password).trim();
+      const cleanName = String(name).trim();
+
+      const users = await ensureUsersStore();
+      if (users.find((u) => u.username.toLowerCase() === cleanUser)) {
+        return res.status(400).json({
+          success: false,
+          error: `Nama pengguna "${cleanUser}" telah digunakan.`
+        });
+      }
+
+      const newUser: UserRecord = {
+        id: `admin-${Date.now()}`,
+        username: cleanUser,
+        password: cleanPass,
+        name: cleanName,
+        role: role === 'Super Administrator' ? 'Super Administrator' : 'Administrator',
+        email: email ? String(email).trim() : `${cleanUser}@jkr.gov.my`,
+        department: department ? String(department).trim() : 'Bahagian Komunikasi Korporat JKR NS',
+        status: 'Aktif',
+        createdAt: new Date().toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })
+      };
+
+      users.push(newUser);
+      await writeUsersStore(users);
+      await logCmsAudit('Daftar Pentadbir', 'Pengguna CMS', 'Super Admin', `Mendaftarkan pentadbir baharu ${cleanName} (${newUser.role})`);
+
+      const { password: _, ...safeUser } = newUser;
+      res.status(201).json({
+        success: true,
+        message: `Pentadbir baharu "${cleanName}" telah berjaya didaftarkan.`,
+        data: safeUser
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 16. PUT /api/cms/admins/:id - Update CMS administrator
+  app.put('/api/cms/admins/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { name, role, email, department, status, password } = req.body;
+
+      const users = await ensureUsersStore();
+      const idx = users.findIndex((u) => u.id === id);
+      if (idx === -1) {
+        return res.status(404).json({ success: false, error: 'Pentadbir tidak ditemui.' });
+      }
+
+      if (name) users[idx].name = String(name).trim();
+      if (role) users[idx].role = role;
+      if (email) users[idx].email = String(email).trim();
+      if (department) users[idx].department = String(department).trim();
+      if (status) users[idx].status = status;
+      if (password && String(password).trim()) {
+        users[idx].password = String(password).trim();
+      }
+
+      await writeUsersStore(users);
+      await logCmsAudit('Kemaskini Pentadbir', 'Pengguna CMS', 'Super Admin', `Mengemaskini maklumat pentadbir ${users[idx].name}`);
+
+      const { password: _, ...safeUser } = users[idx];
+      res.json({
+        success: true,
+        message: `Maklumat pentadbir "${safeUser.name}" telah dikemaskini.`,
+        data: safeUser
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message });
+    }
+  });
+
+  // 17. DELETE /api/cms/admins/:id - Delete CMS administrator
+  app.delete('/api/cms/admins/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const users = await ensureUsersStore();
+      const target = users.find((u) => u.id === id);
+
+      if (!target) {
+        return res.status(404).json({ success: false, error: 'Pentadbir tidak ditemui.' });
+      }
+
+      if (target.username === 'admin') {
+        return res.status(400).json({
+          success: false,
+          error: 'Akaun Pentadbir Utama asal tidak boleh dipadamkan demi keselamatan sistem.'
+        });
+      }
+
+      const updated = users.filter((u) => u.id !== id);
+      await writeUsersStore(updated);
+      await logCmsAudit('Padam Pentadbir', 'Pengguna CMS', 'Super Admin', `Memadamkan pentadbir ${target.name}`);
+
+      res.json({
+        success: true,
+        message: `Pentadbir "${target.name}" telah dipadamkan.`
+      });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err?.message });
     }

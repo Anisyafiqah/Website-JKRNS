@@ -1,0 +1,18 @@
+[
+  {
+    "id": "audit-1793761611924-993",
+    "action": "Penerbitan Rasmi",
+    "section": "Semua Bahagian",
+    "user": "Pentadbir CMS",
+    "details": "Menerbitkan semua kandungan portal ke paparan awam",
+    "timestamp": "04 Nov 2026, 03:06 PG"
+  },
+  {
+    "id": "audit-1793761598705-545",
+    "action": "Log Masuk",
+    "section": "Keselamatan",
+    "user": "Pentadbir Utama JKR NS",
+    "details": "Log masuk CMS berjaya dengan peranan Super Administrator",
+    "timestamp": "04 Nov 2026, 03:06 PG"
+  }
+]
