@@ -887,36 +887,43 @@ export default function App() {
         </div>
 
         {/* Jenama & Logo Rasmi */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
+          <div className="flex items-center justify-between gap-3 lg:gap-4">
             <div
               onClick={() => navigateToPage('utama')}
-              className="flex items-center gap-3 sm:gap-4 cursor-pointer"
+              className="flex items-center gap-2.5 sm:gap-3 cursor-pointer shrink-0"
             >
-              <div className="flex items-center gap-2 p-1.5 bg-white rounded-xl border border-slate-200 shadow-sm">
-                <JataNegeriSembilan className="h-11 sm:h-13 w-auto object-contain transition-transform hover:scale-105" />
-                <div className="h-9 w-px bg-slate-200"></div>
-                <JkrLogo className="h-11 sm:h-13 w-auto object-contain transition-transform hover:scale-105" />
+              {/* Logo Rasmi (Saiz Diselaraskan & Seimbang) */}
+              <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+                <div className="h-11 sm:h-12 flex items-center justify-center">
+                  <JataNegeriSembilan className="h-full w-auto object-contain transition-transform hover:scale-105" />
+                </div>
+                <div className="h-7 w-px bg-slate-300"></div>
+                <div className="h-11 sm:h-12 flex items-center justify-center">
+                  <JkrLogo className="h-9 sm:h-9.5 w-auto object-contain transition-transform hover:scale-105" />
+                </div>
               </div>
-              <div>
-                <span className="block text-[11px] sm:text-xs uppercase tracking-widest text-slate-500 font-bold">
-                  {lang === 'BM' ? 'Portal Rasmi' : 'Official Portal'}
+
+              {/* Teks Jenama: Susunan 3 Baris Kemas & Kompak */}
+              <div className="flex flex-col justify-center select-none shrink-0">
+                <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-500 font-bold leading-none mb-0.5">
+                  {lang === 'BM' ? 'PORTAL RASMI' : 'OFFICIAL PORTAL'}
                 </span>
-                <h1 className="text-base sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight">
-                  {cmsContent.siteConfig.portalName || 'JABATAN KERJA RAYA'}
+                <h1 className="text-sm sm:text-base font-black text-slate-900 tracking-tight leading-snug whitespace-nowrap">
+                  JABATAN KERJA RAYA
                 </h1>
-                <p className="text-xs sm:text-sm font-bold text-[#DC2626] tracking-wide flex items-center gap-1">
-                  <span>{cmsContent.siteConfig.portalSubtitle || 'NEGERI SEMBILAN DARUL KHUSUS'}</span>
-                </p>
+                <span className="text-[10px] sm:text-[11px] font-bold text-[#DC2626] tracking-wider uppercase leading-none whitespace-nowrap mt-0.5">
+                  NEGERI SEMBILAN
+                </span>
               </div>
             </div>
 
             {/* Menu Navigasi Desktop (Satu Modul Satu Halaman) */}
-            <nav className="hidden lg:flex items-center gap-2 xl:gap-3 font-semibold text-xs sm:text-sm">
+            <nav className="hidden lg:flex items-center gap-1 xl:gap-2 font-semibold text-xs xl:text-sm shrink-0">
               <button
                 type="button"
                 onClick={() => navigateToPage('utama')}
-                className={`py-1.5 px-3 rounded-xl transition-all cursor-pointer ${
+                className={`py-1.5 px-2.5 xl:px-3 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                   currentPage === 'utama'
                     ? 'bg-slate-900 text-[#FFD100] font-bold shadow-xs'
                     : 'text-slate-700 hover:text-[#DC2626] hover:bg-slate-100'
@@ -927,7 +934,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => navigateToPage('profil')}
-                className={`py-1.5 px-3 rounded-xl transition-all cursor-pointer ${
+                className={`py-1.5 px-2.5 xl:px-3 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                   currentPage === 'profil'
                     ? 'bg-slate-900 text-[#FFD100] font-bold shadow-xs'
                     : 'text-slate-700 hover:text-[#DC2626] hover:bg-slate-100'
@@ -938,7 +945,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => navigateToPage('bahagian')}
-                className={`py-1.5 px-3 rounded-xl transition-all cursor-pointer ${
+                className={`py-1.5 px-2.5 xl:px-3 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                   currentPage === 'bahagian'
                     ? 'bg-slate-900 text-[#FFD100] font-bold shadow-xs'
                     : 'text-slate-700 hover:text-[#DC2626] hover:bg-slate-100'
@@ -949,19 +956,19 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => navigateToPage('kontraktor')}
-                className={`py-1.5 px-3 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`py-1.5 px-2.5 xl:px-3 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                   currentPage === 'kontraktor'
                     ? 'bg-slate-900 text-[#FFD100] font-bold shadow-xs'
                     : 'text-slate-700 hover:text-[#DC2626] hover:bg-slate-100'
                 }`}
               >
                 <span>{lang === 'BM' ? 'Kontraktor' : 'Contractors'}</span>
-                <span className="w-2 h-2 rounded-full bg-[#DC2626] animate-ping"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626]"></span>
               </button>
               <button
                 type="button"
                 onClick={() => navigateToPage('muatturun')}
-                className={`py-1.5 px-3 rounded-xl transition-all cursor-pointer ${
+                className={`py-1.5 px-2.5 xl:px-3 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                   currentPage === 'muatturun'
                     ? 'bg-slate-900 text-[#FFD100] font-bold shadow-xs'
                     : 'text-slate-700 hover:text-[#DC2626] hover:bg-slate-100'
@@ -972,26 +979,24 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => navigateToPage('warga')}
-                className={`py-1.5 px-3 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`py-1.5 px-2.5 xl:px-3 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                   currentPage === 'warga'
                     ? 'bg-slate-900 text-[#FFD100] font-bold shadow-xs'
                     : 'text-slate-700 hover:text-[#DC2626] hover:bg-slate-100'
                 }`}
               >
-                <i className="fa-solid fa-users text-amber-500 text-xs"></i>
                 <span>Warga JKRNS</span>
               </button>
               <button
                 type="button"
                 onClick={() => navigateToPage('aduan')}
-                className={`px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 text-xs cursor-pointer shadow-md ${
+                className={`py-1.5 px-3 xl:px-3.5 rounded-xl transition-all cursor-pointer font-bold whitespace-nowrap text-xs xl:text-sm ${
                   currentPage === 'aduan'
-                    ? 'bg-[#991B1B] text-white ring-2 ring-[#FFD100]'
-                    : 'bg-[#DC2626] hover:bg-[#991B1B] text-white shadow-red-600/25'
+                    ? 'bg-[#991B1B] text-white ring-2 ring-[#FFD100] shadow-xs'
+                    : 'bg-[#DC2626] hover:bg-[#991B1B] text-white shadow-xs'
                 }`}
               >
-                <i className="fa-solid fa-headset text-[#FFD100]"></i>
-                <span>e-Aduan</span>
+                <span>{lang === 'BM' ? 'e-Aduan' : 'e-Complaint'}</span>
               </button>
             </nav>
 
@@ -1068,7 +1073,7 @@ export default function App() {
                 onClick={() => navigateToPage('aduan')}
                 className="w-full text-left py-2.5 px-3 rounded-xl bg-[#DC2626] text-white font-bold"
               >
-                {lang === 'BM' ? 'e-Aduan Kerosakan' : 'Damage e-Complaint'}
+                {lang === 'BM' ? 'e-Aduan' : 'e-Complaint'}
               </button>
             </div>
           )}
@@ -1211,9 +1216,9 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8 pb-12 border-b border-slate-800">
           {/* Kolum 1 */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl w-fit border border-white/10">
+            <div className="flex items-center gap-2.5 bg-white p-2 rounded-xl w-fit shadow-xs border border-white/20">
               <JataNegeriSembilan className="h-10 w-auto" />
-              <div className="h-8 w-px bg-slate-700"></div>
+              <div className="h-8 w-px bg-slate-200"></div>
               <JkrLogo className="h-10 w-auto" />
             </div>
             <h4 className="text-white font-bold text-sm">

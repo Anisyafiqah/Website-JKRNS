@@ -83,9 +83,9 @@ export const CMSLoginPage: React.FC<CMSLoginPageProps> = ({
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 p-1.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/10">
+            <div className="flex items-center gap-2 p-1.5 bg-white rounded-xl border border-white/20 shadow-xs">
               <JataNegeriSembilan className="h-9 w-auto" />
-              <div className="h-7 w-px bg-white/20"></div>
+              <div className="h-7 w-px bg-slate-200"></div>
               <JkrLogo className="h-9 w-auto" />
             </div>
             <div>
